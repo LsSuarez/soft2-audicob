@@ -1,0 +1,28 @@
+# Build folders
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio cache
+.vs/
+
+# Rider IDE
+.idea/
+
+# Logs
+*.log
+
+# Packages
+*.nupkg
+*.snupkg
+
+# EF Core Migrations (opcional)
+Migrations/
+
+# Others
+*.db

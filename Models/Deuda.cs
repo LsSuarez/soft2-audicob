@@ -22,6 +22,10 @@ namespace Audicob.Models
 
         // Fecha de vencimiento de la deuda, nunca debe ser nula
         public DateTime FechaVencimiento { get; set; }
+        
+        // Clasificación de la deuda: Preventiva, Judicial, Extrajudicial
+        [Required(ErrorMessage = "La clasificación es obligatoria.")]
+        public string Clasificacion { get; set; } = "Preventiva";
 
         // Relación con Cliente: un cliente tiene una deuda, por lo tanto se requiere
         public int ClienteId { get; set; }

@@ -7,7 +7,6 @@ namespace Audicob.Models
         public string AsesorNombre { get; set; } = string.Empty;
         public DateTime FechaAsignacion { get; set; } = DateTime.UtcNow;
 
-        public int ClienteId { get; set; }
-        public Cliente Cliente { get; set; } = null!;
+        public ICollection<Cliente> Clientes { get; set; } = new List<Cliente>();
     }
 }

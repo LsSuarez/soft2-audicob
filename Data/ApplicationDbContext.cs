@@ -23,6 +23,7 @@ namespace Audicob.Data
         public DbSet<Notificacion> Notificaciones { get; set; }
         public DbSet<HistorialCredito> HistorialCreditos { get; set; }
         public DbSet<PagoPendiente> PagoPendiente { get; set; }
+        public DbSet<ReporteAsignacion> ReportesAsignacion { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

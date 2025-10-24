@@ -22,10 +22,12 @@ namespace Audicob.Data
         public DbSet<AsesorAsignado> AsesoresAsignados { get; set; }
         public DbSet<Notificacion> Notificaciones { get; set; }
         public DbSet<HistorialCredito> HistorialCreditos { get; set; }
+        public DbSet<PagoPendiente> PagoPendiente { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<PagoPendiente>().ToTable("PagoPendiente");
 
             // Configuración explícita de la relación ApplicationUser <-> Cliente
             modelBuilder.Entity<ApplicationUser>()

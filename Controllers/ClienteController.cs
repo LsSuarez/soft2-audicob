@@ -63,5 +63,45 @@ namespace Audicob.Controllers
 
             return View(vm);
         }
+
+        //HU 13Abonar cliente
+
+        public async Task<IActionResult> DetalleDeudaTotal()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            // Buscar el cliente autenticado
+            var cliente = await _db.Clientes
+                .Include(c => c.PagosPendientes) // asegúrate de que esta propiedad existe en tu modelo Cliente
+                .FirstOrDefaultAsync(c => c.UserId == user.Id);
+
+            if (cliente == null)
+            {
+                TempData["Error"] = "No se encontró información del cliente.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            // Obtener sus pagos pendientes
+            var deudas = cliente.PagosPendientes?.ToList() ?? new List<PagoPendiente>();
+
+            // Enviar la lista a la vista
+            return View(deudas);
+        }
+        
+        // Acción para mostrar el detalle de un pago pendiente
+        public async Task<IActionResult> DetallePago(int id)
+        {
+            // Buscar el pago pendiente por su Id
+            var pago = await _db.PagoPendiente.FirstOrDefaultAsync(p => p.Id == id);
+
+            if (pago == null)
+            {
+                return NotFound();
+            }
+
+            // Devolver un partial view con la información del pago
+            return PartialView("_DetallePagoPartial", pago);
+        }
+
     }
 }

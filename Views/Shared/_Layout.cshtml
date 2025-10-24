@@ -96,6 +96,16 @@
                                     </a>
                                 </li>
                             }
+                            @* --- CLIENTE --- *@
+@if (User.IsInRole("Cliente"))
+{
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="EstadoCuenta" asp-action="Index">
+            <i class="bi bi-wallet2"></i> Monitorear estado de cuenta
+        </a>
+    </li>
+}
+
                         }
                     </ul>
                     <partial name="_LoginPartial" />

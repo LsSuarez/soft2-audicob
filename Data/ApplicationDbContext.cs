@@ -20,6 +20,7 @@ namespace Audicob.Data
         public DbSet<Transaccion> Transacciones { get; set; }
         public DbSet<Deuda> Deudas { get; set; }
         public DbSet<AsesorAsignado> AsesoresAsignados { get; set; }
+        public DbSet<Notificacion> Notificaciones { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -31,6 +32,31 @@ namespace Audicob.Data
                 .WithOne(c => c.Usuario)
                 .HasForeignKey<Cliente>(c => c.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Configuracion de Notificaciones
+            modelBuilder.Entity<Notificacion>()
+                .HasKey(n => n.Id);
+
+            modelBuilder.Entity<Notificacion>()
+                .HasOne(n => n.Supervisor)
+                .WithMany()
+                .HasForeignKey(n => n.SupervisorId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Notificacion>()
+                .HasOne(n => n.AsignacionAsesor)
+                .WithMany()
+                .HasForeignKey(n => n.AsignacionAsesorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Notificacion>()
+                .HasOne(n => n.Cliente)
+                .WithMany()
+                .HasForeignKey(n => n.ClienteId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Notificacion>()
+                .HasIndex(n => new { n.SupervisorId, n.Leida });
 
             // Aplicar configuraciones Fluent API
             modelBuilder.ApplyConfiguration(new ClienteConfiguration());

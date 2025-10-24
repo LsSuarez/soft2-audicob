@@ -1,6 +1,7 @@
 using Audicob.Data;
 using Audicob.Models;
 using Audicob.Models.ViewModels.Cliente;
+using Audicob.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,12 +11,18 @@ namespace Audicob.Controllers
     public class AsigSupervisorController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly INotificacionService _notificacionService;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<AsigSupervisorController> _logger;
 
         public AsigSupervisorController(ApplicationDbContext context,
+            INotificacionService notificacionService,
+            UserManager<ApplicationUser> userManager,
             ILogger<AsigSupervisorController> logger)
         {
             _context = context;
+            _notificacionService = notificacionService;
+            _userManager = userManager;
             _logger = logger;
         }
 
@@ -121,6 +128,28 @@ namespace Audicob.Controllers
                 // Asignar el cliente al asesor
                 cliente.AsignacionAsesor = asignacion;
                 _context.SaveChanges();
+
+                // OBTENER EL SUPERVISOR ACTUAL (el que está realizando la asignación)
+                var usuarioActual = await _userManager.GetUserAsync(User);
+                
+                if (usuarioActual != null)
+                {
+                    // CREAR NOTIFICACIÓN PARA EL SUPERVISOR
+                    var notificacion = new Notificacion
+                    {
+                        SupervisorId = usuarioActual.Id, // ID del Supervisor actual
+                        Titulo = "📋 Nueva Asignación Realizada",
+                        Descripcion = $"Se ha asignado el cliente {cliente.Nombre} al asesor {asignacion.AsesorNombre}. Deuda total: ${cliente.DeudaTotal:N2}",
+                        AsignacionAsesorId = asesorId,
+                        ClienteId = clienteId,
+                        TipoNotificacion = "NuevaAsignacion",
+                        IconoTipo = "📋",
+                        Leida = false
+                    };
+
+                    await _notificacionService.CrearNotificacion(notificacion);
+                    _logger.LogInformation($"Notificación creada para supervisor {usuarioActual.Id} - Cliente {cliente.Nombre} asignado a {asignacion.AsesorNombre}");
+                }
 
                 var lista = _context.AsignacionesAsesores
                     .Include(a => a.Clientes)

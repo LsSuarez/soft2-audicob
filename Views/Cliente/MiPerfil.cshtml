@@ -1,0 +1,24 @@
+@model Audicob.Models.PerfilCliente
+@{
+    ViewData["Title"] = "Mi Perfil";
+}
+
+<h2>Mi Perfil</h2>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["MensajeExito"]
+    </div>
+}
+
+<div class="card p-4 shadow">
+    <p><strong>Nombre:</strong> @Model.Nombre</p>
+    <p><strong>Teléfono:</strong> @Model.Telefono</p>
+    <p><strong>Correo:</strong> @Model.Correo</p>
+    <p><strong>Dirección:</strong> @Model.Direccion</p>
+    <p><strong>Documento:</strong> @Model.DocumentoIdentidad</p>
+    <p><strong>Fecha de registro:</strong> @Model.FechaRegistro.ToShortDateString()</p>
+
+    <a asp-action="EditarPerfil" class="btn btn-primary mt-3">Editar perfil</a>
+</div>

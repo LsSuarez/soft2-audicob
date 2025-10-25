@@ -103,5 +103,78 @@ namespace Audicob.Controllers
             return PartialView("_DetallePagoPartial", pago);
         }
 
+        // ===============================
+        // PERFIL DEL CLIENTE
+        // ===============================
+        public async Task<IActionResult> MiPerfil()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            // Buscar el perfil del cliente autenticado
+            var perfil = await _db.PerfilesCliente.FirstOrDefaultAsync(p => p.UserId == user.Id);
+
+            if (perfil == null)
+            {
+                // Si no existe, crear un registro inicial con los datos del usuario
+                perfil = new PerfilCliente
+                {
+                    UserId = user.Id,
+                    Nombre = string.Empty, // depende de tu modelo ApplicationUser
+                    Correo = user.Email,
+                    Telefono = string.Empty,       // 👈 evita null
+                    Direccion = string.Empty,      // 👈 evita null
+                    DocumentoIdentidad = string.Empty,
+                    FechaRegistro = DateTime.UtcNow 
+                };
+                _db.PerfilesCliente.Add(perfil);
+                await _db.SaveChangesAsync();
+            }
+
+            return View(perfil);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditarPerfil()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var perfil = await _db.PerfilesCliente.FirstOrDefaultAsync(p => p.UserId == user.Id);
+            if (perfil == null)
+                return RedirectToAction("MiPerfil");
+
+            var vm = new EditarPerfilViewModel
+            {
+                Id = perfil.Id,
+                UserId = perfil.UserId,
+                Nombre = perfil.Nombre,
+                Telefono = perfil.Telefono,
+                Correo = perfil.Correo,
+                Direccion = perfil.Direccion
+            };
+
+            return View(vm);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarPerfil(EditarPerfilViewModel vm)
+        {
+            if (!ModelState.IsValid)
+                return View(vm);
+
+            var perfil = await _db.PerfilesCliente.FirstOrDefaultAsync(p => p.Id == vm.Id);
+            if (perfil == null)
+                return NotFound();
+
+            // Actualizar solo los campos permitidos
+            perfil.Nombre = vm.Nombre;
+            perfil.Telefono = vm.Telefono;
+            perfil.Correo = vm.Correo;
+            perfil.Direccion = vm.Direccion;
+
+            await _db.SaveChangesAsync();
+
+            TempData["MensajeExito"] = "Tu perfil se actualizó correctamente.";
+            return RedirectToAction("MiPerfil");
+        }
+
     }
 }

@@ -1,0 +1,284 @@
+@model Audicob.Models.ViewModels.Supervisor.FiltroMoraViewModel
+@{
+    ViewData["Title"] = "Filtrador de Estado de Mora";
+}
+
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Dashboard">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Filtrador de Mora</li>
+        </ol>
+    </nav>
+
+    <!-- Título -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-filter text-danger me-2"></i>
+                        Filtrador de Estado de Mora
+                    </h2>
+                    <p class="text-muted mb-0">HU-29: Filtrado avanzado por múltiples criterios de morosidad</p>
+                </div>
+                <a asp-action="Dashboard" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form asp-action="FiltrarMora" method="post" id="filtroForm">
+        <div class="row">
+            <!-- Panel de Filtros -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>
+                            Criterios de Filtrado
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Rango de Días -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Días en Mora</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input asp-for="RangoDiasDesde" class="form-control" placeholder="Desde">
+                                    <small class="text-muted">Días mínimos</small>
+                                </div>
+                                <div class="col-6">
+                                    <input asp-for="RangoDiasHasta" class="form-control" placeholder="Hasta">
+                                    <small class="text-muted">Días máximos</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado de Mora -->
+                        <div class="mb-3">
+                            <label asp-for="EstadoMora" class="form-label fw-bold">Estado de Mora</label>
+                            <select asp-for="EstadoMora" class="form-select">
+                                <option value="">-- Todos los estados --</option>
+                                <option value="Al día">Al día</option>
+                                <option value="Temprana">Temprana</option>
+                                <option value="Moderada">Moderada</option>
+                                <option value="Grave">Grave</option>
+                                <option value="Crítica">Crítica</option>
+                            </select>
+                        </div>
+
+                        <!-- Rango de Montos -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Monto de Deuda (S/)</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <input asp-for="MontoDesde" class="form-control" placeholder="Desde" step="0.01">
+                                    <small class="text-muted">Monto mínimo</small>
+                                </div>
+                                <div class="col-6">
+                                    <input asp-for="MontoHasta" class="form-control" placeholder="Hasta" step="0.01">
+                                    <small class="text-muted">Monto máximo</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Cliente -->
+                        <div class="mb-3">
+                            <label asp-for="TipoCliente" class="form-label fw-bold">Tipo de Cliente</label>
+                            <select asp-for="TipoCliente" class="form-select">
+                                <option value="">-- Todos los tipos --</option>
+                                <option value="Nuevo">Nuevo</option>
+                                <option value="Recurrente">Recurrente</option>
+                                <option value="Premium">Premium</option>
+                            </select>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-search me-2"></i>
+                                Aplicar Filtros
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="limpiarFiltros()">
+                                <i class="fas fa-eraser me-2"></i>
+                                Limpiar
+                            </button>
+                        </div>
+
+                        <!-- Guardar Filtro -->
+                        <hr>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="GuardarFiltro" class="form-check-input" type="checkbox" id="guardarFiltro">
+                                <label class="form-check-label" for="guardarFiltro">
+                                    Guardar este filtro
+                                </label>
+                            </div>
+                            <div id="nombreFiltroDiv" class="mt-2" style="display: none;">
+                                <input asp-for="NombreFiltroGuardado" class="form-control" placeholder="Nombre del filtro">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros Guardados -->
+                @if (Model.FiltrosGuardados?.Any() ?? false)
+                {
+                    <div class="card shadow-sm mt-3">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-bookmark me-2"></i>
+                                Filtros Guardados
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            @foreach (var filtro in Model.FiltrosGuardados)
+                            {
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small">@filtro.Nombre</span>
+                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="cargarFiltro(@filtro.Id)">
+                                        <i class="fas fa-upload"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Panel de Resultados -->
+            <div class="col-lg-8">
+                @if (Model.ResultadosFiltrados?.Any() ?? false)
+                {
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list me-2"></i>
+                                Resultados del Filtro
+                            </h5>
+                            <div>
+                                <span class="badge bg-light text-dark me-2">@Model.TotalRegistros registros</span>
+                                <span class="badge bg-light text-dark">@Model.TiempoRespuesta.TotalMilliseconds.ToString("F0")ms</span>
+                                <button type="submit" name="exportar" value="true" class="btn btn-sm btn-light ms-2">
+                                    <i class="fas fa-download me-1"></i>
+                                    Excel
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Documento</th>
+                                            <th>Estado Mora</th>
+                                            <th>Deuda Total</th>
+                                            <th>Días en Mora</th>
+                                            <th>Prioridad</th>
+                                            <th>Ingresos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var cliente in Model.ResultadosFiltrados)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@cliente.Nombre</strong>
+                                                </td>
+                                                <td>@cliente.Documento</td>
+                                                <td>
+                                                    <span class="badge @(cliente.EstadoMora switch {
+                                                        "Al día" => "bg-success",
+                                                        "Temprana" => "bg-warning",
+                                                        "Moderada" => "bg-warning text-dark",
+                                                        "Grave" => "bg-danger",
+                                                        "Crítica" => "bg-dark",
+                                                        _ => "bg-secondary"
+                                                    })">
+                                                        @cliente.EstadoMora
+                                                    </span>
+                                                </td>
+                                                <td>S/ @cliente.DeudaTotal.ToString("N2")</td>
+                                                <td>@cliente.DiasEnMora días</td>
+                                                <td>
+                                                    <span class="badge bg-@cliente.ColorIndicador">
+                                                        @cliente.NivelPrioridad
+                                                    </span>
+                                                </td>
+                                                <td>S/ @cliente.IngresosMensuales.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card shadow-sm">
+                        <div class="card-body text-center">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">Configura los filtros y presiona "Aplicar Filtros"</h4>
+                            <p class="text-muted">Los resultados aparecerán aquí</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Mostrar/ocultar campo de nombre del filtro
+        document.getElementById('guardarFiltro').addEventListener('change', function() {
+            const div = document.getElementById('nombreFiltroDiv');
+            div.style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Limpiar filtros
+        function limpiarFiltros() {
+            document.getElementById('filtroForm').reset();
+            document.getElementById('nombreFiltroDiv').style.display = 'none';
+        }
+
+        // Cargar filtro guardado
+        function cargarFiltro(filtroId) {
+            fetch('/Supervisor/CargarFiltro', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(filtroId)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Aplicar configuración a los campos del formulario
+                    const config = data.configuracion;
+                    if (config.RangoDiasDesde) document.querySelector('[name="RangoDiasDesde"]').value = config.RangoDiasDesde;
+                    if (config.RangoDiasHasta) document.querySelector('[name="RangoDiasHasta"]').value = config.RangoDiasHasta;
+                    if (config.EstadoMora) document.querySelector('[name="EstadoMora"]').value = config.EstadoMora;
+                    if (config.MontoDesde) document.querySelector('[name="MontoDesde"]').value = config.MontoDesde;
+                    if (config.MontoHasta) document.querySelector('[name="MontoHasta"]').value = config.MontoHasta;
+                    if (config.TipoCliente) document.querySelector('[name="TipoCliente"]').value = config.TipoCliente;
+                    
+                    Swal.fire('¡Filtro cargado!', 'La configuración ha sido aplicada', 'success');
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error', 'No se pudo cargar el filtro', 'error');
+            });
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+}

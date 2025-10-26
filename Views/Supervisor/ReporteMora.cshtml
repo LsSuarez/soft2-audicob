@@ -1,0 +1,295 @@
+@model Audicob.Models.ViewModels.Supervisor.ReporteMoraViewModel
+@{
+    ViewData["Title"] = "Reporte de Morosidad";
+}
+
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Dashboard">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Reporte de Morosidad</li>
+        </ol>
+    </nav>
+
+    <!-- Título -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-chart-line text-danger me-2"></i>
+                        Reporte de Morosidad
+                    </h2>
+                    <p class="text-muted mb-0">Análisis completo del estado de mora por períodos</p>
+                </div>
+                <div>
+                    <form asp-action="ExportarReporteMoraPdf" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger me-2">
+                            <i class="fas fa-file-pdf me-1"></i> Exportar PDF
+                        </button>
+                    </form>
+                    <a asp-action="Dashboard" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Generales -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Estadísticas Generales
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Distribución de Clientes</h6>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge bg-success">Al día</span>
+                                    <span>@Model.ClientesAlDia (@((Model.TotalClientes > 0 ? (decimal)Model.ClientesAlDia / Model.TotalClientes * 100 : 0).ToString("F1"))%)</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-success" style="width: @((Model.TotalClientes > 0 ? (decimal)Model.ClientesAlDia / Model.TotalClientes * 100 : 0).ToString("F1"))%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge bg-warning">Temprana</span>
+                                    <span>@Model.ClientesMoraTemrpana (@((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraTemrpana / Model.TotalClientes * 100 : 0).ToString("F1"))%)</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-warning" style="width: @((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraTemrpana / Model.TotalClientes * 100 : 0).ToString("F1"))%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge bg-info">Moderada</span>
+                                    <span>@Model.ClientesMoraModerada (@((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraModerada / Model.TotalClientes * 100 : 0).ToString("F1"))%)</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-info" style="width: @((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraModerada / Model.TotalClientes * 100 : 0).ToString("F1"))%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge bg-danger">Grave</span>
+                                    <span>@Model.ClientesMoraGrave (@((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraGrave / Model.TotalClientes * 100 : 0).ToString("F1"))%)</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-danger" style="width: @((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraGrave / Model.TotalClientes * 100 : 0).ToString("F1"))%"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="badge bg-dark">Crítica</span>
+                                    <span>@Model.ClientesMoraCritica (@((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraCritica / Model.TotalClientes * 100 : 0).ToString("F1"))%)</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-dark" style="width: @((Model.TotalClientes > 0 ? (decimal)Model.ClientesMoraCritica / Model.TotalClientes * 100 : 0).ToString("F1"))%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Montos por Estado</h6>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td><span class="badge bg-success">Al día</span></td>
+                                        <td class="text-end">S/ @Model.MontoAlDia.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-warning">Temprana</span></td>
+                                        <td class="text-end">S/ @Model.MontoMoraTemplana.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-info">Moderada</span></td>
+                                        <td class="text-end">S/ @Model.MontoMoraModerada.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-danger">Grave</span></td>
+                                        <td class="text-end">S/ @Model.MontoMoraGrave.ToString("N2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-dark">Crítica</span></td>
+                                        <td class="text-end">S/ @Model.MontoMoraCritica.ToString("N2")</td>
+                                    </tr>
+                                    <tr class="table-dark">
+                                        <td><strong>Total</strong></td>
+                                        <td class="text-end"><strong>S/ @Model.MontoTotalDeuda.ToString("N2")</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Resumen Ejecutivo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h2 class="text-primary">@Model.TotalClientes</h2>
+                        <p class="text-muted">Total de Clientes</p>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-danger">@Model.PorcentajeClientesEnMora.ToString("F1")%</h4>
+                            <small class="text-muted">Clientes en Mora</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning">@Model.PorcentajeMontoEnMora.ToString("F1")%</h4>
+                            <small class="text-muted">Monto en Mora</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <h3 class="text-success">S/ @Model.MontoTotalDeuda.ToString("N2")</h3>
+                        <small class="text-muted">Monto Total de Deuda</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Evolución Mensual -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area me-2"></i>
+                        Evolución Mensual (Últimos 6 Meses)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Total Clientes</th>
+                                    <th>Clientes en Mora</th>
+                                    <th>% Mora</th>
+                                    <th>Monto en Mora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var mes in Model.EvolucionMensual)
+                                {
+                                    <tr>
+                                        <td>@mes.NombreMes</td>
+                                        <td>@mes.TotalClientes</td>
+                                        <td>
+                                            <span class="badge bg-warning">@mes.ClientesEnMora</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar bg-danger" style="width: @mes.PorcentajeMora.ToString("F1")%">
+                                                    @mes.PorcentajeMora.ToString("F1")%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">S/ @mes.MontoTotalMora.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clientes con Mayor Deuda -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Top 10 - Clientes con Mayor Deuda
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Documento</th>
+                                    <th>Estado Mora</th>
+                                    <th>Deuda Total</th>
+                                    <th>Días en Mora</th>
+                                    <th>Ingresos Mensuales</th>
+                                    <th>Ratio Deuda/Ingreso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cliente in Model.ClientesMayorDeuda)
+                                {
+                                    <tr>
+                                        <td><strong>@cliente.Nombre</strong></td>
+                                        <td>@cliente.Documento</td>
+                                        <td>
+                                            <span class="badge bg-@cliente.ColorEstado">
+                                                @cliente.EstadoMora
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <strong>S/ @cliente.DeudaTotal.ToString("N2")</strong>
+                                        </td>
+                                        <td>
+                                            @if (cliente.DiasEnMora > 0)
+                                            {
+                                                <span class="text-danger">@cliente.DiasEnMora días</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-success">0 días</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">S/ @cliente.IngresosMensuales.ToString("N2")</td>
+                                        <td class="text-center">
+                                            @{
+                                                var ratio = cliente.IngresosMensuales > 0 ? cliente.DeudaTotal / cliente.IngresosMensuales : 0;
+                                                var ratioClass = ratio > 2 ? "danger" : ratio > 1 ? "warning" : "success";
+                                            }
+                                            <span class="badge bg-@ratioClass">
+                                                @ratio.ToString("F1")x
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Aquí podrías agregar gráficos con Chart.js si lo deseas
+        $(document).ready(function() {
+            // Inicializar tooltips si los hay
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+    </script>
+}

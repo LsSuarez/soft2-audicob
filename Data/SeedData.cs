@@ -46,7 +46,10 @@ namespace Audicob.Data.SeedData
                     Documento = "12345678",
                     Nombre = "Cliente Demo",
                     IngresosMensuales = 2500,
-                    DeudaTotal = 1200
+                    DeudaTotal = 1200,
+                    EstadoMora = "Al día",
+                    EstadoAdmin = "Aceptado",
+                    FechaActualizacion = DateTime.UtcNow.AddDays(-5)
                 };
 
                 var cliente2 = new Cliente
@@ -54,7 +57,10 @@ namespace Audicob.Data.SeedData
                     Documento = "87654321",
                     Nombre = "María López",
                     IngresosMensuales = 3200,
-                    DeudaTotal = 800
+                    DeudaTotal = 800,
+                    EstadoMora = "Temprana",
+                    EstadoAdmin = "Aceptado",
+                    FechaActualizacion = DateTime.UtcNow.AddDays(-35)
                 };
 
                 var cliente3 = new Cliente
@@ -62,10 +68,48 @@ namespace Audicob.Data.SeedData
                     Documento = "11223344",
                     Nombre = "Carlos Ruiz",
                     IngresosMensuales = 2800,
-                    DeudaTotal = 1500
+                    DeudaTotal = 1500,
+                    EstadoMora = "Moderada",
+                    EstadoAdmin = "Aceptado",
+                    FechaActualizacion = DateTime.UtcNow.AddDays(-65)
                 };
 
-                db.Clientes.AddRange(cliente1, cliente2, cliente3);
+                // Clientes adicionales para pruebas del filtrador
+                var cliente4 = new Cliente
+                {
+                    Documento = "55667788",
+                    Nombre = "Ana García",
+                    IngresosMensuales = 4000,
+                    DeudaTotal = 3500,
+                    EstadoMora = "Grave",
+                    EstadoAdmin = "Aceptado",
+                    FechaActualizacion = DateTime.UtcNow.AddDays(-95)
+                };
+
+                var cliente5 = new Cliente
+                {
+                    Documento = "99887766",
+                    Nombre = "Luis Fernández",
+                    IngresosMensuales = 1800,
+                    DeudaTotal = 5200,
+                    EstadoMora = "Crítica",
+                    EstadoAdmin = "Pendiente",
+                    FechaActualizacion = DateTime.UtcNow.AddDays(-120)
+                };
+
+                var cliente6 = new Cliente
+                {
+                    Documento = "44332211",
+                    Nombre = "Patricia Morales",
+                    IngresosMensuales = 3500,
+                    DeudaTotal = 2200,
+                    EstadoMora = "Moderada",
+                    EstadoAdmin = "Rechazado",
+                    MotivoAdmin = "Ingresos insuficientes",
+                    FechaActualizacion = DateTime.UtcNow.AddDays(-50)
+                };
+
+                db.Clientes.AddRange(cliente1, cliente2, cliente3, cliente4, cliente5, cliente6);
                 await db.SaveChangesAsync();
 
                 // Insertar deuda para cliente1

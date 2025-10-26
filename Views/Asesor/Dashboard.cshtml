@@ -33,6 +33,42 @@
     </div>
 </div>
 
+<!-- Funcionalidades de Gestión de Mora - HU-30 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Gestión de Morosidad
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-grid">
+                            <a asp-action="CambiarEstadoMora" class="btn btn-warning btn-lg mb-2">
+                                <i class="fas fa-exchange-alt me-2"></i>
+                                Cambiar Estado de Morosidad
+                            </a>
+                            <small class="text-muted">Modifica el estado de mora de tus clientes asignados</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-grid">
+                            <a href="#" onclick="verHistorialCliente()" class="btn btn-outline-warning btn-lg mb-2">
+                                <i class="fas fa-history me-2"></i>
+                                Ver Historial de Estados
+                            </a>
+                            <small class="text-muted">Consulta el historial completo de cambios de estado</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Gráfico de deudas por cliente -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-secondary text-white">Deuda por Cliente</div>
@@ -48,9 +84,11 @@
         <tr>
             <th>Nombre</th>
             <th>Documento</th>
+            <th>Estado Mora</th>
             <th>Deuda</th>
             <th>Ingresos</th>
             <th>Última Actualización</th>
+            <th>Acciones</th>
         </tr>
     </thead>
     <tbody>
@@ -59,9 +97,26 @@
         <tr>
             <td>@cliente.Nombre</td>
             <td>@cliente.Documento</td>
-            <td>S/ @cliente.Deuda</td>
+            <td>
+                <span class="@Audicob.Models.ViewModels.Asesor.CambiarEstadoMoraViewModel.ObtenerClaseEstado(cliente.EstadoMora)">
+                    @cliente.EstadoMora
+                </span>
+            </td>
+            <td>S/ @cliente.DeudaTotal</td>
             <td>S/ @cliente.IngresosMensuales</td>
             <td>@cliente.FechaActualizacion.ToShortDateString()</td>
+            <td>
+                <div class="btn-group" role="group">
+                    <a asp-action="CambiarEstadoMora" asp-route-clienteId="@cliente.Id" 
+                       class="btn btn-sm btn-warning" title="Cambiar Estado">
+                        <i class="fas fa-exchange-alt"></i>
+                    </a>
+                    <a asp-action="VerHistorialEstado" asp-route-clienteId="@cliente.Id" 
+                       class="btn btn-sm btn-info" title="Ver Historial">
+                        <i class="fas fa-history"></i>
+                    </a>
+                </div>
+            </td>
         </tr>
     }
     </tbody>
@@ -83,5 +138,35 @@
                 }]
             }
         });
+
+        function verHistorialCliente() {
+            // Mostrar modal para seleccionar cliente
+            var clientes = @Html.Raw(Json.Serialize(Model.ClientesAsignados.Select(c => new { c.Id, c.Nombre, c.Documento })));
+            var options = clientes.map(c => `<option value="${c.Id}">${c.Nombre} (${c.Documento})</option>`).join('');
+            
+            Swal.fire({
+                title: 'Seleccionar Cliente',
+                html: `<select id="clienteSelect" class="form-select">
+                         <option value="">-- Seleccione un cliente --</option>
+                         ${options}
+                       </select>`,
+                showCancelButton: true,
+                confirmButtonText: 'Ver Historial',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const clienteId = document.getElementById('clienteSelect').value;
+                    if (!clienteId) {
+                        Swal.showValidationMessage('Debe seleccionar un cliente');
+                        return false;
+                    }
+                    return clienteId;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `/Asesor/VerHistorialEstado/${result.value}`;
+                }
+            });
+        }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 }

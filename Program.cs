@@ -99,6 +99,12 @@ namespace Audicob
                 {
                     // Inicializa los datos por defecto (roles, usuarios, etc.)
                     await SeedData.InitializeAsync(services);
+                    
+                    // 🔧 CORRECCIÓN: Actualizar registros con EstadoAdmin NULL
+                    var db = services.GetRequiredService<ApplicationDbContext>();
+                    await db.Database.ExecuteSqlRawAsync(
+                        "UPDATE \"Clientes\" SET \"EstadoAdmin\" = 'Pendiente' WHERE \"EstadoAdmin\" IS NULL"
+                    );
                 }
                 catch (Exception ex)
                 {

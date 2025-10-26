@@ -526,5 +526,452 @@ namespace Audicob.Controllers
             }
         }
 
+        // ==========================================================
+        // HU-29: FILTRADOR DE ESTADO DE MORA
+        // ==========================================================
+
+        /// <summary>
+        /// Muestra la vista del filtrador avanzado de mora
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> FiltrarMora()
+        {
+            var vm = new FiltroMoraViewModel();
+            
+            // Cargar filtros guardados del usuario actual
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                vm.FiltrosGuardados = await _db.FiltrosGuardados
+                    .Where(f => f.UserId == user.Id)
+                    .OrderByDescending(f => f.FechaCreacion)
+                    .ToListAsync();
+            }
+
+            return View(vm);
+        }
+
+        /// <summary>
+        /// Procesa el filtrado de mora con criterios específicos
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FiltrarMora(FiltroMoraViewModel modelo, string? exportar)
+        {
+            var startTime = DateTime.Now;
+            
+            try
+            {
+                // CORRECCIÓN: Actualizar registros con EstadoAdmin NULL
+                await CorregirEstadoAdminNull();
+                
+                // Si es una exportación, redirigir al método correspondiente
+                if (!string.IsNullOrEmpty(exportar))
+                {
+                    return ExportarFiltroMora(modelo);
+                }
+
+                // Iniciar con clientes que tienen datos válidos
+                var query = _db.Clientes
+                    .Where(c => !string.IsNullOrEmpty(c.Nombre) && !string.IsNullOrEmpty(c.Documento))
+                    .AsQueryable();
+
+                // Aplicar filtros por rango de días en mora
+                if (modelo.RangoDiasDesde.HasValue || modelo.RangoDiasHasta.HasValue)
+                {
+                    if (modelo.RangoDiasDesde.HasValue)
+                    {
+                        var fechaMaxima = DateTime.UtcNow.AddDays(-modelo.RangoDiasDesde.Value);
+                        query = query.Where(c => c.FechaActualizacion <= fechaMaxima);
+                    }
+                    if (modelo.RangoDiasHasta.HasValue)
+                    {
+                        var fechaMinima = DateTime.UtcNow.AddDays(-modelo.RangoDiasHasta.Value);
+                        query = query.Where(c => c.FechaActualizacion >= fechaMinima);
+                    }
+                }
+
+                // Filtrar por estado de mora
+                if (!string.IsNullOrEmpty(modelo.EstadoMora))
+                {
+                    query = query.Where(c => c.EstadoMora == modelo.EstadoMora);
+                }
+
+                // Filtrar por monto de deuda
+                if (modelo.MontoDesde.HasValue)
+                {
+                    query = query.Where(c => c.DeudaTotal >= modelo.MontoDesde.Value);
+                }
+
+                if (modelo.MontoHasta.HasValue)
+                {
+                    query = query.Where(c => c.DeudaTotal <= modelo.MontoHasta.Value);
+                }
+
+                // Ejecutar consulta y mapear resultados
+                var clientes = await query.ToListAsync();
+                
+                modelo.ResultadosFiltrados = clientes.Select(c => {
+                    var diasEnMora = (DateTime.UtcNow - c.FechaActualizacion).Days;
+                    var clienteInfo = new ClienteMoraInfo
+                    {
+                        ClienteId = c.Id,
+                        Nombre = c.Nombre,
+                        Documento = c.Documento,
+                        DeudaTotal = c.DeudaTotal,
+                        EstadoMora = c.EstadoMora,
+                        IngresosMensuales = c.IngresosMensuales,
+                        DiasEnMora = diasEnMora > 0 ? diasEnMora : 0,
+                        MontoEnMora = c.DeudaTotal,
+                        TipoCliente = "Estándar" // Por defecto, podrías calcularlo según tus reglas de negocio
+                    };
+                    
+                    clienteInfo.CalcularPrioridad();
+                    return clienteInfo;
+                }).OrderByDescending(c => c.DiasEnMora).ThenByDescending(c => c.MontoEnMora).ToList();
+
+                // Actualizar metadatos
+                modelo.TotalRegistros = modelo.ResultadosFiltrados.Count;
+                modelo.TiempoRespuesta = DateTime.Now - startTime;
+
+                // Guardar filtro si se solicita
+                if (modelo.GuardarFiltro && !string.IsNullOrEmpty(modelo.NombreFiltroGuardado))
+                {
+                    await GuardarFiltro(modelo);
+                    TempData["Success"] = $"Filtro '{modelo.NombreFiltroGuardado}' guardado correctamente.";
+                }
+                
+                // Recargar filtros guardados
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    modelo.FiltrosGuardados = await _db.FiltrosGuardados
+                        .Where(f => f.UserId == user.Id)
+                        .OrderByDescending(f => f.FechaCreacion)
+                        .ToListAsync();
+                }
+
+                TempData["Success"] = $"Filtrado completado: {modelo.TotalRegistros} clientes encontrados en {modelo.TiempoRespuesta.TotalMilliseconds:F0}ms";
+                
+                return View(modelo);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al procesar el filtro: {ex.Message}";
+                return View(modelo);
+            }
+        }
+
+        /// <summary>
+        /// Carga un filtro guardado
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CargarFiltro(int filtroId)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Json(new { success = false, message = "Usuario no encontrado" });
+                }
+                
+                var filtro = await _db.FiltrosGuardados
+                    .FirstOrDefaultAsync(f => f.Id == filtroId && f.UserId == user.Id);
+
+                if (filtro == null)
+                {
+                    return Json(new { success = false, message = "Filtro no encontrado" });
+                }
+
+                // Deserializar la configuración JSON
+                var configuracion = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(filtro.ConfiguracionJson);
+
+                return Json(new { success = true, configuracion = configuracion });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Exporta los resultados del filtro a Excel
+        /// </summary>
+        [HttpPost]
+        public IActionResult ExportarFiltroMora(FiltroMoraViewModel modelo)
+        {
+            try
+            {
+                using (var workbook = new XLWorkbook())
+                {
+                    var worksheet = workbook.Worksheets.Add("Reporte Mora");
+                    
+                    // Headers
+                    worksheet.Cell(1, 1).Value = "Cliente";
+                    worksheet.Cell(1, 2).Value = "Documento";
+                    worksheet.Cell(1, 3).Value = "Estado Mora";
+                    worksheet.Cell(1, 4).Value = "Deuda Total";
+                    worksheet.Cell(1, 5).Value = "Días en Mora";
+                    worksheet.Cell(1, 6).Value = "Prioridad";
+                    worksheet.Cell(1, 7).Value = "Ingresos Mensuales";
+                    
+                    // Data
+                    for (int i = 0; i < modelo.ResultadosFiltrados.Count; i++)
+                    {
+                        var cliente = modelo.ResultadosFiltrados[i];
+                        worksheet.Cell(i + 2, 1).Value = cliente.Nombre;
+                        worksheet.Cell(i + 2, 2).Value = cliente.Documento;
+                        worksheet.Cell(i + 2, 3).Value = cliente.EstadoMora;
+                        worksheet.Cell(i + 2, 4).Value = cliente.DeudaTotal;
+                        worksheet.Cell(i + 2, 5).Value = cliente.DiasEnMora;
+                        worksheet.Cell(i + 2, 6).Value = cliente.NivelPrioridad;
+                        worksheet.Cell(i + 2, 7).Value = cliente.IngresosMensuales;
+                    }
+                    
+                    worksheet.ColumnsUsed().AdjustToContents();
+                    
+                    using (var stream = new MemoryStream())
+                    {
+                        workbook.SaveAs(stream);
+                        var content = stream.ToArray();
+                        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "FiltroMora.xlsx");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al exportar: {ex.Message}";
+                return RedirectToAction("FiltrarMora");
+            }
+        }
+
+        // ==========================================================
+        // MÉTODOS AUXILIARES PARA HU-29
+        // ==========================================================
+
+        /// <summary>
+        /// Guarda un filtro para uso futuro
+        /// </summary>
+        private async Task GuardarFiltro(FiltroMoraViewModel modelo)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null) return;
+
+                var configuracion = new
+                {
+                    RangoDiasDesde = modelo.RangoDiasDesde,
+                    RangoDiasHasta = modelo.RangoDiasHasta,
+                    TipoCliente = modelo.TipoCliente,
+                    MontoDesde = modelo.MontoDesde,
+                    MontoHasta = modelo.MontoHasta,
+                    EstadoMora = modelo.EstadoMora
+                };
+
+                var filtroGuardado = new FiltroGuardado
+                {
+                    Nombre = modelo.NombreFiltroGuardado ?? "Filtro sin nombre",
+                    UserId = user.Id,
+                    ConfiguracionJson = System.Text.Json.JsonSerializer.Serialize(configuracion),
+                    FechaCreacion = DateTime.UtcNow
+                };
+
+                _db.FiltrosGuardados.Add(filtroGuardado);
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the main operation
+                Console.WriteLine($"Error al guardar filtro: {ex.Message}");
+            }
+        }
+
+        // ==========================================================
+        // MÉTODOS AUXILIARES
+        // ==========================================================
+
+        /// <summary>
+        /// Corrige valores NULL en EstadoAdmin
+        /// </summary>
+        private async Task CorregirEstadoAdminNull()
+        {
+            // Corregir EstadoAdmin NULL
+            var clientesConNull = await _db.Clientes
+                .Where(c => c.EstadoAdmin == null || c.EstadoAdmin == "")
+                .ToListAsync();
+
+            if (clientesConNull.Any())
+            {
+                foreach (var cliente in clientesConNull)
+                {
+                    cliente.EstadoAdmin = "Pendiente";
+                }
+                await _db.SaveChangesAsync();
+            }
+            
+            // Eliminar clientes sin nombre o documento (datos incompletos)
+            var clientesVacios = await _db.Clientes
+                .Where(c => string.IsNullOrEmpty(c.Nombre) || string.IsNullOrEmpty(c.Documento))
+                .ToListAsync();
+                
+            if (clientesVacios.Any())
+            {
+                _db.Clientes.RemoveRange(clientesVacios);
+                await _db.SaveChangesAsync();
+            }
+        }
+
+        // ==========================================================
+        // REPORTE DE MOROSIDAD
+        // ==========================================================
+
+        /// <summary>
+        /// Muestra el reporte completo de morosidad
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> ReporteMora()
+        {
+            try
+            {
+                // CORRECCIÓN: Actualizar registros con EstadoAdmin NULL
+                await CorregirEstadoAdminNull();
+                
+                var reporteViewModel = new ReporteMoraViewModel();
+                
+                // Obtener todos los clientes con información de mora (solo con datos válidos)
+                var clientes = await _db.Clientes
+                    .Where(c => !string.IsNullOrEmpty(c.Nombre) && !string.IsNullOrEmpty(c.Documento))
+                    .ToListAsync();
+                
+                // Estadísticas generales
+                reporteViewModel.TotalClientes = clientes.Count;
+                reporteViewModel.ClientesAlDia = clientes.Count(c => c.EstadoMora == "Al día");
+                reporteViewModel.ClientesMoraTemrpana = clientes.Count(c => c.EstadoMora == "Temprana");
+                reporteViewModel.ClientesMoraModerada = clientes.Count(c => c.EstadoMora == "Moderada");
+                reporteViewModel.ClientesMoraGrave = clientes.Count(c => c.EstadoMora == "Grave");
+                reporteViewModel.ClientesMoraCritica = clientes.Count(c => c.EstadoMora == "Crítica");
+                
+                // Montos por estado
+                reporteViewModel.MontoTotalDeuda = clientes.Sum(c => c.DeudaTotal);
+                reporteViewModel.MontoAlDia = clientes.Where(c => c.EstadoMora == "Al día").Sum(c => c.DeudaTotal);
+                reporteViewModel.MontoMoraTemplana = clientes.Where(c => c.EstadoMora == "Temprana").Sum(c => c.DeudaTotal);
+                reporteViewModel.MontoMoraModerada = clientes.Where(c => c.EstadoMora == "Moderada").Sum(c => c.DeudaTotal);
+                reporteViewModel.MontoMoraGrave = clientes.Where(c => c.EstadoMora == "Grave").Sum(c => c.DeudaTotal);
+                reporteViewModel.MontoMoraCritica = clientes.Where(c => c.EstadoMora == "Crítica").Sum(c => c.DeudaTotal);
+                
+                // Clientes con mayor deuda
+                reporteViewModel.ClientesMayorDeuda = clientes
+                    .OrderByDescending(c => c.DeudaTotal)
+                    .Take(10)
+                    .Select(c => new ClienteReporteMora
+                    {
+                        Nombre = c.Nombre,
+                        Documento = c.Documento,
+                        EstadoMora = c.EstadoMora,
+                        DeudaTotal = c.DeudaTotal,
+                        DiasEnMora = (DateTime.UtcNow - c.FechaActualizacion).Days,
+                        IngresosMensuales = c.IngresosMensuales
+                    }).ToList();
+                
+                // Evolución mensual (últimos 6 meses)
+                reporteViewModel.EvolucionMensual = new List<EvolucionMoraMensual>();
+                for (int i = 5; i >= 0; i--)
+                {
+                    var fecha = DateTime.UtcNow.AddMonths(-i);
+                    var fechaInicio = new DateTime(fecha.Year, fecha.Month, 1);
+                    var fechaFin = fechaInicio.AddMonths(1).AddDays(-1);
+                    
+                    // Simular datos históricos (en un escenario real, tendrías tabla de históricos)
+                    var clientesEnFecha = clientes.Where(c => c.FechaActualizacion <= fechaFin).ToList();
+                    
+                    reporteViewModel.EvolucionMensual.Add(new EvolucionMoraMensual
+                    {
+                        Mes = fecha.ToString("yyyy-MM"),
+                        NombreMes = fecha.ToString("MMMM yyyy"),
+                        TotalClientes = clientesEnFecha.Count,
+                        ClientesEnMora = clientesEnFecha.Count(c => c.EstadoMora != "Al día"),
+                        MontoTotalMora = clientesEnFecha.Where(c => c.EstadoMora != "Al día").Sum(c => c.DeudaTotal),
+                        PorcentajeMora = clientesEnFecha.Count > 0 
+                            ? (decimal)clientesEnFecha.Count(c => c.EstadoMora != "Al día") / clientesEnFecha.Count * 100 
+                            : 0
+                    });
+                }
+                
+                return View(reporteViewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al generar el reporte: {ex.Message}";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        /// <summary>
+        /// Exporta el reporte de morosidad a PDF
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ExportarReporteMoraPdf()
+        {
+            try
+            {
+                var clientes = await _db.Clientes.ToListAsync();
+                
+                using (var memoryStream = new MemoryStream())
+                {
+                    Document doc = new Document(PageSize.A4);
+                    PdfWriter.GetInstance(doc, memoryStream);
+                    doc.Open();
+
+                    // Título
+                    Paragraph title = new Paragraph("Reporte de Morosidad\n\n")
+                    {
+                        Alignment = Element.ALIGN_CENTER
+                    };
+                    doc.Add(title);
+
+                    // Estadísticas generales
+                    string statsText = $"Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm}\n" +
+                                     $"Total de clientes: {clientes.Count}\n" +
+                                     $"Clientes al día: {clientes.Count(c => c.EstadoMora == "Al día")}\n" +
+                                     $"Clientes en mora: {clientes.Count(c => c.EstadoMora != "Al día")}\n" +
+                                     $"Monto total deuda: S/ {clientes.Sum(c => c.DeudaTotal):N2}\n\n";
+                    
+                    Paragraph stats = new Paragraph(statsText);
+                    doc.Add(stats);
+
+                    // Tabla de clientes
+                    PdfPTable table = new PdfPTable(5);
+                    table.WidthPercentage = 100;
+                    table.AddCell("Cliente");
+                    table.AddCell("Documento");
+                    table.AddCell("Estado Mora");
+                    table.AddCell("Deuda Total");
+                    table.AddCell("Días en Mora");
+
+                    foreach (var cliente in clientes.OrderByDescending(c => c.DeudaTotal))
+                    {
+                        table.AddCell(cliente.Nombre);
+                        table.AddCell(cliente.Documento);
+                        table.AddCell(cliente.EstadoMora);
+                        table.AddCell($"S/ {cliente.DeudaTotal:N2}");
+                        table.AddCell(((DateTime.UtcNow - cliente.FechaActualizacion).Days).ToString());
+                    }
+
+                    doc.Add(table);
+                    doc.Close();
+
+                    byte[] bytes = memoryStream.ToArray();
+                    return File(bytes, "application/pdf", $"ReporteMorosidad_{DateTime.Now:yyyyMMdd}.pdf");
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al exportar el reporte: {ex.Message}";
+                return RedirectToAction("ReporteMora");
+            }
+        }
+
     }
 }

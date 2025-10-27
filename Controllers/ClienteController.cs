@@ -81,6 +81,13 @@ namespace Audicob.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
+            // ESTA PARTE ES DE HU-25🔹 Buscar el método de pago guardado para este cliente 
+            var metodo = await _db.MetodosPagoClientes
+                .FirstOrDefaultAsync(m => m.UserId == user.Id);
+
+            // ESTA PARTE ES DE HU-25🔹 Pasar el método guardado a la vista
+            ViewBag.MetodoSeleccionado = metodo?.Metodo ?? "—";
+
             // Obtener sus pagos pendientes
             var deudas = cliente.PagosPendientes?.ToList() ?? new List<PagoPendiente>();
 
@@ -175,6 +182,49 @@ namespace Audicob.Controllers
             TempData["MensajeExito"] = "Tu perfil se actualizó correctamente.";
             return RedirectToAction("MiPerfil");
         }
+
+        
+        // ===============================
+        // MÉTODO DE PAGO HU-25
+        // ===============================
+        public IActionResult MetodoPago()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GuardarMetodoPago(string metodo)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            // Buscar si ya tiene un método registrado
+            var registroExistente = await _db.MetodosPagoClientes
+                .FirstOrDefaultAsync(m => m.UserId == user.Id);
+
+            if (registroExistente != null)
+            {
+                registroExistente.Metodo = metodo;
+            }
+            else
+            {
+                var nuevoRegistro = new MetodoPagoCliente
+                {
+                    UserId = user.Id,
+                    Metodo = metodo
+                };
+                _db.MetodosPagoClientes.Add(nuevoRegistro);
+            }
+
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"Método de pago '{metodo}' guardado correctamente.";
+
+            return RedirectToAction("DetalleDeudaTotal");
+        }
+
+
 
     }
 }

@@ -23,6 +23,7 @@
                             <th>Descripción</th>
                             <th class="text-end">Monto</th>
                             <th class="text-center">Fecha de Vencimiento</th>
+                            <th class="text-center">Método de Pago</th>  <!-- 🔹 Nueva columna -->
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -33,6 +34,13 @@
                                 <td>@deuda.Descripcion</td>
                                 <td class="text-end fw-semibold text-danger">@deuda.Monto.ToString("C")</td>
                                 <td class="text-center">@deuda.FechaVencimiento.ToShortDateString()</td>
+
+                                <!-- 🔹 Nueva celda vacía donde se mostrará el método guardado -->
+                                <td class="text-center metodo-pago" id="metodo-@deuda.Id">
+                                    <span>@ViewBag.MetodoSeleccionado</span>
+                                </td>
+
+
                                 <td class="text-center">
                                     <button class="btn btn-outline-primary btn-sm px-3"
                                             onclick="mostrarDetalle(@deuda.Id, this)">
@@ -41,7 +49,7 @@
                                 </td>
                             </tr>
                             <tr class="detalle-row" style="display:none;">
-                                <td colspan="4" class="p-0 detalle-container"></td>
+                                <td colspan="5" class="p-0 detalle-container"></td> <!-- 🔹 colspan actualizado -->
                             </tr>
                         }
                     </tbody>

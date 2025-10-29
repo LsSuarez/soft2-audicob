@@ -5,12 +5,14 @@
         <div class="col-md-6">
             <h6 class="text-primary fw-bold mb-2">📄 Detalle de Boleta</h6>
             <p class="mb-1"><strong>Descripción:</strong> @Model.Descripcion</p>
-            <p class="mb-1"><strong>Monto:</strong> <span class="text-danger fw-semibold">S/ @Model.Monto</span></p>
-        </div> 
+            <p class="mb-1"><strong>Monto:</strong> <span class="text-danger fw-semibold">@Model.Monto.ToString("C")</span></p>
+        </div>
         <div class="col-md-6">
             <p class="mb-1"><strong>Fecha de Vencimiento:</strong> @Model.FechaVencimiento.ToString("dd/MM/yyyy")</p>
-            <p class="mb-0"><strong>Estado:</strong> 
-                <span class="badge bg-warning text-dark">Pendiente de pago</span>
+            <p class="mb-0"><strong>Estado:</strong>
+                <span class="badge @(Model.Estado == "Cancelado" ? "bg-success" : "bg-warning text-dark")">
+                    @Model.Estado
+                </span>
             </p>
         </div>
     </div>

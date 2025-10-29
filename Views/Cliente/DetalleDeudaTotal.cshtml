@@ -2,16 +2,14 @@
 
 @{
     ViewData["Title"] = "Detalle de Deuda Total";
-    decimal total = Model.Sum(d => d.Monto);
+    decimal total = Model?.Sum(d => d.Monto) ?? 0;
 }
 
 <div class="container mt-4">
-    <div class="card shadow border-0"> 
+    <div class="card shadow border-0">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h4 class="mb-0">💰 Detalle de Deuda Total</h4>
-            <span class="badge bg-light text-dark px-3 py-2">
-                Total: @total.ToString("C")
-            </span>
+            <span class="badge bg-light text-dark px-3 py-2">Total: @total.ToString("C")</span>
         </div>
 
         <div class="card-body bg-white">
@@ -23,33 +21,46 @@
                             <th>Descripción</th>
                             <th class="text-end">Monto</th>
                             <th class="text-center">Fecha de Vencimiento</th>
-                            <th class="text-center">Método de Pago</th>  <!-- 🔹 Nueva columna -->
+                            <th class="text-center">Método de Pago</th>
+                            <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var deuda in Model)
                         {
-                            <tr>
+                            <tr id="fila-@deuda.Id">
                                 <td>@deuda.Descripcion</td>
                                 <td class="text-end fw-semibold text-danger">@deuda.Monto.ToString("C")</td>
                                 <td class="text-center">@deuda.FechaVencimiento.ToShortDateString()</td>
-
-                                <!-- 🔹 Nueva celda vacía donde se mostrará el método guardado -->
-                                <td class="text-center metodo-pago" id="metodo-@deuda.Id">
-                                    <span>@ViewBag.MetodoSeleccionado</span>
-                                </td>
-
-
+                                <td class="text-center">@ViewBag.MetodoSeleccionado</td>
                                 <td class="text-center">
-                                    <button class="btn btn-outline-primary btn-sm px-3"
-                                            onclick="mostrarDetalle(@deuda.Id, this)">
+                                    <span class="badge @(deuda.Estado == "Cancelado" ? "bg-success" : "bg-warning text-dark")" id="estado-@deuda.Id">
+                                        @deuda.Estado
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="toggleDetalle(@deuda.Id, this)">
                                         <i class="bi bi-eye"></i> Detalle
                                     </button>
+
+                                    @if (deuda.Estado != "Cancelado")
+                                    {
+                                        <button class="btn btn-success btn-sm ms-2" onclick="pagarDeuda(@deuda.Id, this)">
+                                            <i class="bi bi-cash-coin"></i> Pagar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-secondary btn-sm ms-2" disabled>
+                                            <i class="bi bi-check-circle"></i> Pagado
+                                        </button>
+                                    }
                                 </td>
                             </tr>
-                            <tr class="detalle-row" style="display:none;">
-                                <td colspan="5" class="p-0 detalle-container"></td> <!-- 🔹 colspan actualizado -->
+
+                            <tr class="detalle-row" id="detalle-row-@deuda.Id" style="display:none;">
+                                <td colspan="6" class="p-0 detalle-container"></td>
                             </tr>
                         }
                     </tbody>
@@ -57,9 +68,7 @@
             }
             else
             {
-                <div class="alert alert-success text-center my-3">
-                    🎉 No tienes deudas pendientes
-                </div>
+                <div class="alert alert-success text-center my-3">🎉 No tienes deudas pendientes</div>
             }
         </div>
     </div>
@@ -67,29 +76,74 @@
 
 @section Scripts {
 <script>
-    async function mostrarDetalle(id, boton) {
-        const fila = boton.closest('tr').nextElementSibling;
-        const contenedor = fila.querySelector('.detalle-container');
+async function toggleDetalle(id, boton) {
+    const detalleRow = document.getElementById(`detalle-row-${id}`);
+    const cont = detalleRow.querySelector('.detalle-container');
 
-        if (fila.style.display === 'table-row') {
-            fila.style.display = 'none';
-            contenedor.innerHTML = '';
-            return;
-        }
-
-        const response = await fetch(`/Cliente/DetallePago?id=${id}`);
-        if (!response.ok) {
-            contenedor.innerHTML = `
-                <div class="p-3 text-danger text-center bg-light border-top">
-                    ❌ No se pudo cargar el detalle.
-                </div>`;
-            fila.style.display = 'table-row';
-            return;
-        }
-
-        const html = await response.text();
-        contenedor.innerHTML = html;
-        fila.style.display = 'table-row';
+    // si ya está visible, lo escondo
+    if (detalleRow.style.display && detalleRow.style.display !== 'none') {
+        detalleRow.style.display = 'none';
+        cont.innerHTML = '';
+        return;
     }
+
+    // cargar partial
+    try {
+        boton.disabled = true;
+        const res = await fetch(`/Cliente/DetallePago?id=${id}`, { method: 'GET' });
+        if (!res.ok) {
+            cont.innerHTML = `<div class="p-3 text-danger text-center">❌ No se pudo cargar el detalle (status ${res.status}).</div>`;
+            detalleRow.style.display = '';
+            return;
+        }
+        const html = await res.text();
+        cont.innerHTML = html;
+        detalleRow.style.display = '';
+    } catch (err) {
+        cont.innerHTML = `<div class="p-3 text-danger text-center">❌ Error al cargar detalle: ${err.message}</div>`;
+        detalleRow.style.display = '';
+    } finally {
+        boton.disabled = false;
+    }
+}
+
+async function pagarDeuda(id, boton) {
+    if (!confirm('¿Deseas marcar esta deuda como pagada?')) return;
+
+    boton.disabled = true;
+    const originalHtml = boton.innerHTML;
+    boton.innerHTML = 'Procesando...';
+
+    try {
+        const res = await fetch(`/Cliente/PagarDeuda`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `id=${id}`
+        });
+
+        if (!res.ok) {
+            const text = await res.text();
+            alert('No se pudo actualizar: ' + (text || res.status));
+            boton.disabled = false;
+            boton.innerHTML = originalHtml;
+            return;
+        }
+
+        // éxito: actualizar UI sin recargar
+        const estadoSpan = document.getElementById(`estado-${id}`);
+        if (estadoSpan) {
+            estadoSpan.textContent = 'Cancelado';
+            estadoSpan.className = 'badge bg-success';
+        }
+        // cambiar botón
+        boton.className = 'btn btn-secondary btn-sm';
+        boton.innerHTML = '<i class="bi bi-check-circle"></i> Pagado';
+        boton.disabled = true;
+    } catch (err) {
+        alert('Error: ' + err.message);
+        boton.disabled = false;
+        boton.innerHTML = originalHtml;
+    }
+}
 </script>
 }

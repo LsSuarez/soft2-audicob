@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Audicob.Controllers
 {
@@ -66,13 +67,17 @@ namespace Audicob.Controllers
 
         //HU 13Abonar cliente
 
+        // Asegúrate de tener estos using
+
+
+        // Acción: DetalleDeudaTotal (muestra la lista y setea ViewBag)
         public async Task<IActionResult> DetalleDeudaTotal()
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
 
-            // Buscar el cliente autenticado
             var cliente = await _db.Clientes
-                .Include(c => c.PagosPendientes) // asegúrate de que esta propiedad existe en tu modelo Cliente
+                .Include(c => c.PagosPendientes)
                 .FirstOrDefaultAsync(c => c.UserId == user.Id);
 
             if (cliente == null)
@@ -81,33 +86,45 @@ namespace Audicob.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // ESTA PARTE ES DE HU-25🔹 Buscar el método de pago guardado para este cliente 
+            // Obtener método guardado (si lo tienes en MetodosPagoClientes)
             var metodo = await _db.MetodosPagoClientes
                 .FirstOrDefaultAsync(m => m.UserId == user.Id);
-
-            // ESTA PARTE ES DE HU-25🔹 Pasar el método guardado a la vista
             ViewBag.MetodoSeleccionado = metodo?.Metodo ?? "—";
 
-            // Obtener sus pagos pendientes
             var deudas = cliente.PagosPendientes?.ToList() ?? new List<PagoPendiente>();
-
-            // Enviar la lista a la vista
             return View(deudas);
         }
-        
-        // Acción para mostrar el detalle de un pago pendiente
+
+        // Acción: Devuelve el partial con el PagoPendiente solicitado
+        [HttpGet]
         public async Task<IActionResult> DetallePago(int id)
         {
-            // Buscar el pago pendiente por su Id
             var pago = await _db.PagoPendiente.FirstOrDefaultAsync(p => p.Id == id);
-
-            if (pago == null)
-            {
-                return NotFound();
-            }
-
-            // Devolver un partial view con la información del pago
+            if (pago == null) return NotFound();
             return PartialView("_DetallePagoPartial", pago);
+        }
+
+        // Acción: Marca deuda como cancelada
+        [HttpPost]
+        public async Task<IActionResult> PagarDeuda(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            // Buscar y validar que la deuda pertenece al cliente autenticado
+            var deuda = await _db.PagoPendiente
+                .Include(p => p.Cliente)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Cliente.UserId == user.Id);
+
+            if (deuda == null) return NotFound();
+
+            if (deuda.Estado == "Cancelado")
+                return BadRequest(new { success = false, message = "Ya está cancelado." });
+
+            deuda.Estado = "Cancelado";
+            await _db.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Pago registrado correctamente" });
         }
 
         // ===============================

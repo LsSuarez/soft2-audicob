@@ -1,0 +1,112 @@
+@model Audicob.Models.ViewModels.Admin.ReintegrarClienteViewModel
+@{
+    ViewData["Title"] = "Reintegrar Cliente";
+}
+
+<div class="container mt-4">
+    <h2 class="text-primary mb-3">Reintegrar Cliente</h2>
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <form asp-action="ReintegrarCliente" method="post" class="mb-4">
+        <div class="input-group">
+            <input asp-for="Documento" class="form-control" placeholder="Ingrese el documento del cliente..." />
+            <button type="submit" class="btn btn-primary">Buscar</button>
+        </div>
+        <span asp-validation-for="Documento" class="text-danger"></span>
+    </form>
+
+    @if (Model.ClienteEncontrado)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5><strong>Nombre:</strong> @Model.Nombre</h5>
+                <h6><strong>Estado:</strong> @Model.Estado</h6>
+            </div>
+        </div>
+
+        @if (Model.Historial.Any())
+        {
+            <h4>Historial Crediticio</h4>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Monto</th>
+                        <th>Tipo Operación</th>
+                        <th>Fecha</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Historial)
+                    {
+                        <tr>
+                            <td>@item.MontoOperacion.ToString("C")</td>
+                            <td>@item.TipoOperacion</td>
+                            <td>@item.FechaOperacion.ToShortDateString()</td>
+                            <td>@item.Observaciones</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="text-end mt-3">
+                <form asp-action="ReintegrarClienteConfirmado" method="post">
+                    <input type="hidden" name="documento" value="@Model.Documento" />
+                    <button type="submit" class="btn btn-success">Reintegrar Cliente</button>
+                </form>
+            </div>
+            
+
+            @if (Model.Auditorias != null && Model.Auditorias.Any())
+            {
+                <h4>Historial de Auditoría</h4>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Nombre Cliente</th>
+                            <th>DNI</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var audit in Model.Auditorias)
+                        {
+                            <tr>
+                                <td>@audit.FechaAccion.ToShortDateString()</td>
+                                <td>@audit.FechaAccion.ToShortTimeString()</td>
+                                <td>@audit.NombreCliente</td>
+                                <td>@audit.DniCliente</td>
+                                <td>@audit.Accion</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info">No hay registros de auditoría para este cliente.</div>
+            }
+
+
+
+        }
+        else
+        {
+            <div class="alert alert-info">No hay historial crediticio para este cliente.</div>
+        }
+    }
+    else if (!string.IsNullOrEmpty(Model.Documento))
+    {
+        <div class="alert alert-danger">No se encontró un cliente con ese documento.</div>
+    }
+</div>
+

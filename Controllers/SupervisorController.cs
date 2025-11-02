@@ -972,6 +972,75 @@ namespace Audicob.Controllers
                 return RedirectToAction("ReporteMora");
             }
         }
+        // ===============================
+        // ANÁLISIS DE PAGOS HU-04
+        // ===============================
+        [HttpGet]
+        public IActionResult AnalisisPagos()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult AnalisisPagosGenerar(bool parcial = false)
+        {
+            // Consulta de pagos desde la tabla HistorialCredito
+            var total = _db.HistorialCreditos.Count();
+            if (total == 0)
+            {
+                TempData["Error"] = "No hay registros en HistorialCredito para analizar.";
+                return RedirectToAction("AnalisisPagos");
+            }
+
+            var pagados = _db.HistorialCreditos.Count(h => h.EstadoPago == "Pagado");
+            var pendientes = _db.HistorialCreditos.Count(h => h.EstadoPago == "Pendiente");
+
+            var porcentajePagados = (double)pagados / total * 100;
+            var porcentajePendientes = (double)pendientes / total * 100;
+
+            // Enviar resultados a la vista mediante ViewBag o ViewModel
+            ViewBag.Pagados = porcentajePagados.ToString("0.00");
+            ViewBag.Pendientes = porcentajePendientes.ToString("0.00");
+
+            if (parcial)
+                return PartialView("_GraficoPagosPartial");
+            else
+                return View("AnalisisPagos");
+        }
+
+        [HttpPost]
+        public IActionResult AnalisisPagosCalcular(bool parcial = false)
+        {
+            var data = _db.HistorialCreditos
+                .GroupBy(h => h.FechaOperacion.Date)
+                .Select(g => new
+                {
+                    Fecha = g.Key,
+                    MontoTotal = g.Sum(x => x.MontoOperacion)
+                })
+                .OrderBy(g => g.Fecha)
+                .ToList();
+
+            if (data.Count == 0)
+            {
+                TempData["Error"] = "No hay registros en HistorialCredito para calcular proyección.";
+                return RedirectToAction("AnalisisPagos");
+            }
+
+            double totalEstimado = data.Sum(x => Convert.ToDouble(x.MontoTotal));
+
+
+            // Convertir datos para la vista
+            ViewBag.Fechas = data.Select(d => d.Fecha.ToString("dd/MM/yyyy")).ToList();
+            ViewBag.Montos = data.Select(d => d.MontoTotal).ToList();
+            ViewBag.TotalEstimado = totalEstimado.ToString("0.00");
+
+            if (parcial)
+                return PartialView("_GraficoProyeccionPartial");
+            else
+                return View("AnalisisPagos");
+        }
+
 
     }
 }

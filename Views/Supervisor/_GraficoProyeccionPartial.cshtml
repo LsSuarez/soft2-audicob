@@ -1,0 +1,13 @@
+@if (ViewBag.Fechas != null)
+{
+    <div class="alert alert-info">
+        <strong>Total estimado:</strong> S/ @ViewBag.TotalEstimado
+    </div>
+
+    <canvas id="graficoProyeccion" style="max-width: 600px;"></canvas>
+
+    <script>
+        window.fechasProyeccion = @Html.Raw(Json.Serialize(ViewBag.Fechas));
+        window.montosProyeccion = @Html.Raw(Json.Serialize(ViewBag.Montos));
+    </script>
+}

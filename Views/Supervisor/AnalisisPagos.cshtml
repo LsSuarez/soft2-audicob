@@ -1,0 +1,187 @@
+@{
+    ViewData["Title"] = "Análisis de Pagos";
+}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="text-primary">Análisis de Pagos</h2>
+    <button id="btnExportarPDF" class="btn btn-danger">📄 Exportar PDF</button>
+</div>
+<div id="contenidoAnalisis">
+    <div class="row">
+        <!-- Panel izquierdo: Generar -->
+        <div class="col-md-6 border-end">
+            <h4 class="text-success">Pagos Puntuales vs Atrasados</h4>
+            <button id="btnGenerar" class="btn btn-success mb-3">Generar</button>
+            <div id="resultadoGenerar"></div>
+        </div>
+
+        <!-- Panel derecho: Calcular -->
+        <div class="col-md-6">
+            <h4 class="text-primary">Proyección de Pagos</h4>
+            <button id="btnCalcular" class="btn btn-primary mb-3">Calcular</button>
+            <div id="resultadoCalcular"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Botón "Generar"
+        $("#btnGenerar").click(function () {
+            $.post("/Supervisor/AnalisisPagosGenerar", { parcial: true }, function (data) {
+                $("#resultadoGenerar").html(data);
+                renderGraficoPagos(); // dibujar gráfico después de insertar
+            });
+        });
+
+        // Botón "Calcular"
+        $("#btnCalcular").click(function () {
+            $.post("/Supervisor/AnalisisPagosCalcular", { parcial: true }, function (data) {
+                $("#resultadoCalcular").html(data);
+                renderGraficoProyeccion(); // dibujar gráfico después de insertar
+            });
+        });
+
+        // Función para gráfico circular
+        function renderGraficoPagos() {
+            const pagados = parseFloat($("#valorPagados").val());
+            const pendientes = parseFloat($("#valorPendientes").val());
+            if (isNaN(pagados) || isNaN(pendientes)) return;
+
+            const ctx = document.getElementById('graficoPagos');
+            if (!ctx) return;
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Pagados', 'Pendientes'],
+                    datasets: [{
+                        data: [pagados, pendientes],
+                        backgroundColor: ['#28a745', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Pagos Puntuales vs Atrasados' }
+                    }
+                }
+            });
+        }
+
+        // Función para gráfico de barras
+        function renderGraficoProyeccion() {
+            const ctx2 = document.getElementById('graficoProyeccion');
+            if (!ctx2) return;
+
+            // Validar variables globales generadas por el backend
+            if (typeof window.fechasProyeccion === "undefined" || typeof window.montosProyeccion === "undefined") return;
+
+            // Crear un gradiente de color para la línea
+            const gradient = ctx2.getContext('2d').createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(0, 123, 255, 0.6)');
+            gradient.addColorStop(1, 'rgba(0, 123, 255, 0.05)');
+
+            new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: window.fechasProyeccion,
+                    datasets: [{
+                        label: 'Monto esperado por día (S/)',
+                        data: window.montosProyeccion,
+                        fill: true,
+                        backgroundColor: gradient,
+                        borderColor: '#007bff',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointBackgroundColor: '#007bff',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Monto (S/)',
+                                color: '#333'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Fecha de operación',
+                                color: '#333'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: {
+                            display: true,
+                            text: 'Proyección de Montos Esperados',
+                            color: '#000'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `S/ ${context.parsed.y.toFixed(2)}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+        <script>
+            $("#btnExportarPDF").click(async function () {
+                // Tomamos el contenido de la vista completa o una parte
+                const contenedor = document.getElementById("contenidoAnalisis"); 
+                if (!contenedor) {
+                    alert("No se encontró el contenido para exportar.");
+                    return;
+                }
+
+                // Capturamos todo el contenido visible
+                const canvas = await html2canvas(contenedor, { scale: 2 });
+                const imgData = canvas.toDataURL("image/png");
+
+                // Creamos el PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF("p", "mm", "a4");
+
+                // Calcular proporciones
+                const imgWidth = 190;
+                const pageHeight = 295;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 10;
+
+                // Agregar imagen (captura) al PDF
+                pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                // Si es más largo que una hoja, añade páginas
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                pdf.save("AnalisisPagos.pdf");
+            });
+        </script>
+
+}
+

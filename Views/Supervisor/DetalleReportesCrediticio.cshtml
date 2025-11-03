@@ -1,0 +1,29 @@
+@model Audicob.Models.HistorialCredito
+@{
+    Layout = null;
+}
+<div class="modal-header">
+    <h5 class="modal-title text-primary">Detalle del Crédito</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <table class="table table-bordered">
+        <tbody>
+            <tr><th>Nombre del Cliente</th><td>@Model.NombreCliente</td></tr>
+            <tr><th>DNI del Cliente</th><td>@Model.DniCliente</td></tr>
+            <tr><th>Código del Cliente</th><td>@Model.CodigoCliente</td></tr>
+            <tr><th>Tipo de Operación</th><td>@Model.TipoOperacion</td></tr>
+            <tr><th>Monto de la Operación</th><td>@Model.MontoOperacion.ToString("C")</td></tr>
+            <tr><th>Fecha de la Operación</th><td>@Model.FechaOperacion.ToString("dd/MM/yyyy")</td></tr>
+            <tr><th>Estado de Pago</th><td>@Model.EstadoPago</td></tr>
+            <tr><th>Producto / Servicio</th><td>@Model.ProductoServicio</td></tr>
+            <tr><th>Días de Crédito</th><td>@Model.DiasCredito</td></tr>
+            <tr><th>Observaciones</th><td>@Model.Observaciones</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+</div>

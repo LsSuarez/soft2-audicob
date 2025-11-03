@@ -14,6 +14,7 @@ using iTextSharp.text.pdf;
 using ClosedXML.Excel;
 using System.IO;
 
+
 namespace Audicob.Controllers
 {
     [Authorize(Roles = "Supervisor")]
@@ -1040,6 +1041,158 @@ namespace Audicob.Controllers
             else
                 return View("AnalisisPagos");
         }
+
+        // ==========================================================
+        // HU-33: REPORTES CREDITICIOS (Listado + Detalle)
+        // ==========================================================
+
+        [HttpGet]
+        public async Task<IActionResult> ReportesCrediticios()
+        {
+            // Cargar todos los registros del historial de créditos
+            var historial = await _db.HistorialCreditos
+                .OrderByDescending(h => h.FechaOperacion)
+                .ToListAsync();
+
+            // Retorna la vista personalizada "ReportesCrediticios"
+            return View("ReportesCrediticios", historial);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DetalleReportesCrediticios(int id)
+        {
+            // Busca un registro específico por su ID
+            var credito = await _db.HistorialCreditos
+                .FirstOrDefaultAsync(h => h.Id == id);
+
+            if (credito == null)
+            {
+                return NotFound();
+            }
+
+            // Retorna la vista personalizada "DetalleReportesCrediticios"
+            return View("DetalleReportesCrediticio", credito);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> FiltrarReportesCrediticios(string estado)
+        {
+            var query = _db.HistorialCreditos.AsQueryable();
+
+            if (!string.IsNullOrEmpty(estado))
+            {
+                query = query.Where(h => h.EstadoPago == estado);
+            }
+
+            var filtrados = await query
+                .OrderByDescending(h => h.FechaOperacion)
+                .ToListAsync();
+
+            return PartialView("_TablaReportesCrediticiosPartial", filtrados);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportarHistorialCreditoPDF(int id)
+        {
+            var credito = await _db.HistorialCreditos.FirstOrDefaultAsync(h => h.Id == id);
+            if (credito == null)
+                return NotFound();
+
+            var pdfBytes = GenerarPDFHistorialCredito(credito);
+
+            return File(pdfBytes, "application/pdf", $"HistorialCredito_{credito.Id}.pdf");
+        }
+private byte[] GenerarPDFHistorialCredito(HistorialCredito credito)
+{
+    using (var stream = new MemoryStream())
+    {
+        // Crear documento iTextSharp
+        var document = new Document(PageSize.A4, 50, 50, 50, 50);
+        PdfWriter.GetInstance(document, stream);
+        document.Open();
+
+        // Definir colores RGB
+        BaseColor blue = new BaseColor(0, 0, 255);
+        BaseColor gray = new BaseColor(128, 128, 128);
+        BaseColor lightGray = new BaseColor(211, 211, 211);
+
+        // Fuentes
+        var tituloFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 20, blue);
+        var subFont = FontFactory.GetFont(FontFactory.HELVETICA, 10, gray);
+        var boldFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12);
+        var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 12);
+
+        // =======================
+        // Encabezado
+        // =======================
+        var headerTable = new PdfPTable(1) { WidthPercentage = 100 };
+
+        // Imagen placeholder (puedes reemplazar con tu logo)
+       
+
+        // Texto del encabezado
+        var headerText = new PdfPCell();
+        headerText.Border = Rectangle.NO_BORDER;
+        headerText.AddElement(new Paragraph("Audicob - Reporte de Crédito", tituloFont));
+        headerText.AddElement(new Paragraph($"Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm}", subFont));
+        headerTable.AddCell(headerText);
+
+        document.Add(headerTable);
+        document.Add(new Paragraph("\n")); // espacio
+
+        // =======================
+        // Tabla de detalles
+        // =======================
+        var table = new PdfPTable(2) { WidthPercentage = 100 };
+        table.SetWidths(new float[] { 200, 300 });
+
+        void AddRow(string campo, string valor)
+        {
+            var cell1 = new PdfPCell(new Phrase(campo, boldFont))
+            {
+                BorderWidthBottom = 1,
+                BorderColorBottom = lightGray,
+                PaddingBottom = 5
+            };
+            var cell2 = new PdfPCell(new Phrase(valor ?? "-", normalFont))
+            {
+                BorderWidthBottom = 1,
+                BorderColorBottom = lightGray,
+                PaddingBottom = 5
+            };
+
+            table.AddCell(cell1);
+            table.AddCell(cell2);
+        }
+
+        AddRow("Nombre del Cliente", credito.NombreCliente);
+        AddRow("DNI del Cliente", credito.DniCliente);
+        AddRow("Código del Cliente", credito.CodigoCliente);
+        AddRow("Tipo de Operación", credito.TipoOperacion);
+        AddRow("Monto de la Operación", $"{credito.MontoOperacion:C}");
+        AddRow("Fecha de la Operación", credito.FechaOperacion.ToString("dd/MM/yyyy"));
+        AddRow("Estado de Pago", credito.EstadoPago);
+        AddRow("Producto / Servicio", credito.ProductoServicio);
+        AddRow("Días de Crédito", credito.DiasCredito.ToString());
+        AddRow("Observaciones", credito.Observaciones);
+
+        document.Add(table);
+        document.Add(new Paragraph("\n")); // espacio
+
+        // =======================
+        // Pie de página
+        // =======================
+        var footer = new Paragraph($"Audicob © {DateTime.Now.Year}", subFont)
+        {
+            Alignment = Element.ALIGN_CENTER
+        };
+        document.Add(footer);
+
+        document.Close();
+
+        return stream.ToArray();
+    }
+}
 
 
     }

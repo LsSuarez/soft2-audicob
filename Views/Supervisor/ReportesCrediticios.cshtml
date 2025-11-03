@@ -1,0 +1,71 @@
+@model IEnumerable<Audicob.Models.HistorialCredito>
+
+@{
+    ViewData["Title"] = "Reportes Crediticios";
+}
+
+<div class="container mt-4">
+    <h2 class="text-primary mb-4">Reportes Crediticios</h2>
+
+    <!-- 🔽 Filtro de Estado de Pago -->
+    <div class="mb-3 d-flex gap-2 align-items-center">
+        <label for="filtroEstado" class="form-label fw-bold mb-0">Filtrar por Estado de Pago:</label>
+        <select id="filtroEstado" class="form-select w-auto">
+            <option value="">Todos</option>
+            <option value="Pagado">Pagado</option>
+            <option value="Pendiente">Pendiente</option>
+        </select>
+    </div>
+
+    <!-- 🔽 Tabla cargada dinámicamente -->
+    <div id="tablaReportes">
+        @await Html.PartialAsync("_TablaReportesCrediticiosPartial", Model)
+    </div>
+</div>
+
+<!-- 🔽 Modal para ver el detalle -->
+<div class="modal fade" id="detalleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="detalleContenido">
+            <!-- Aquí se cargará el detalle vía AJAX -->
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // 🧩 Filtrado dinámico por Estado de Pago
+        $('#filtroEstado').on('change', function () {
+            var estado = $(this).val();
+            $.ajax({
+                url: '/Supervisor/FiltrarReportesCrediticios',
+                type: 'GET',
+                data: { estado: estado },
+                success: function (data) {
+                    $('#tablaReportes').html(data);
+                },
+                error: function () {
+                    alert('Error al filtrar los reportes.');
+                }
+            });
+        });
+
+        // 🧩 Delegación de eventos para los botones de detalle
+        $(document).on('click', '.btn-detalle', function () {
+            var id = $(this).data('id');
+
+            $.ajax({
+                url: '/Supervisor/DetalleReportesCrediticios/' + id,
+                type: 'GET',
+                success: function (data) {
+                    $('#detalleContenido').html(data);
+                    var modal = new bootstrap.Modal(document.getElementById('detalleModal'));
+                    modal.show();
+                },
+                error: function () {
+                    alert('Error al cargar el detalle.');
+                }
+            });
+        });
+    </script>
+}

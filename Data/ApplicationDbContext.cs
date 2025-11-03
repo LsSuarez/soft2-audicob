@@ -26,6 +26,8 @@ namespace Audicob.Data
         public DbSet<ReporteAsignacion> ReportesAsignacion { get; set; }
         public DbSet<PerfilCliente> PerfilesCliente { get; set; }
         public DbSet<MetodoPagoCliente> MetodosPagoClientes { get; set; }
+        public DbSet<HistorialAuditoria> HistorialAuditorias { get; set; }
+
         
         // DbSets para funcionalidades de mora
         public DbSet<HistorialEstadoMora> HistorialEstadosMora { get; set; }

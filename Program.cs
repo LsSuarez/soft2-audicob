@@ -89,6 +89,13 @@ namespace Audicob
                 defaults: new { controller = "Cobranza", action = "Cliente" }
             );
 
+            // ✅ NUEVA RUTA: Para el dashboard de validación
+            app.MapControllerRoute(
+                name: "validation",
+                pattern: "Validation/{action=Index}/{id?}",
+                defaults: new { controller = "Validation" }
+            );
+
             app.MapRazorPages(); // Habilita las páginas Razor
 
             // 🌱 Seed de roles y usuarios iniciales

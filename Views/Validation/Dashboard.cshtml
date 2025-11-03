@@ -1,0 +1,47 @@
+@model Audicob.Models.ValidationMetrics
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2>Dashboard de Métricas</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h3>@Model.TotalRecords</h3>
+                                    <p>Total Registros</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h3>@Model.ValidRecords</h3>
+                                    <p>Válidos (@Model.ValidPercentage.ToString("F1")%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h3>@Model.ErrorRecords</h3>
+                                    <p>Con Errores (@Model.ErrorPercentage.ToString("F1")%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h3>@Model.PendingAlerts</h3>
+                                    <p>Alertas Pendientes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,146 @@
+@{
+    ViewData["Title"] = "Modificar Estado de Cartera";
+}
+
+<div class="container">
+    <h2>DETALLE DE CARTERA</h2>
+    <p>Estado Actual del Cliente</p>
+
+    <!-- Información del Cliente -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <strong>Cliente</strong><br>
+            <span>@Model.ClienteNombre</span>
+        </div>
+    </div>
+
+    <!-- Estado Actual - EDITABLE -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Estado actual</label>
+        </div>
+        <div class="col-md-8">
+            <select class="form-select" id="estadoCartera" 
+                    data-estado-anterior="@Model.EstadoActual">
+                <option value="Vigente" selected="@(Model.EstadoActual == "Vigente")">Vigente</option>
+                <option value="Morosa" selected="@(Model.EstadoActual == "Morosa")">Morosa</option>
+                <option value="Castigada" selected="@(Model.EstadoActual == "Castigada")">Castigada</option>
+                <option value="Temprana" selected="@(Model.EstadoActual == "Temprana")">Temprana</option>
+                <option value="Al día" selected="@(Model.EstadoActual == "Al día")">Al día</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Última modificación -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <label class="form-label fw-bold">Última modificación</label>
+        </div>
+        <div class="col-md-8">
+            <span id="fechaModificacion">@Model.UltimaModificacion</span>
+        </div>
+    </div>
+
+    <!-- Notificación de éxito -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success mt-3" id="notificacionExito">
+            <strong>Operación exitosa</strong> @TempData["Success"]
+        </div>
+    }
+
+    <!-- Botones de Acción (ocultos inicialmente) -->
+    <div class="row mb-4" id="botonesAccion" style="display: none;">
+        <div class="col-12">
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-outline-secondary" onclick="descartarCambios()">
+                    Descartar datos
+                </button>
+                <button class="btn btn-primary" onclick="confirmarCambios()">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- Acciones Disponibles -->
+    <h5>Acciones Disponibles</h5>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="verPerfil" checked>
+        <label class="form-check-label" for="verPerfil">
+            Ver Perfil Completo del Cliente
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="volverDashboard">
+        <label class="form-check-label" for="volverDashboard">
+            Volver al Dashboard
+        </label>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let estadoOriginal = document.getElementById('estadoCartera').value;
+
+        // Mostrar botones cuando cambia el estado
+        document.getElementById('estadoCartera').addEventListener('change', function() {
+            const botones = document.getElementById('botonesAccion');
+            if (this.value !== estadoOriginal) {
+                botones.style.display = 'block';
+            } else {
+                botones.style.display = 'none';
+            }
+        });
+
+        // Confirmar cambios
+        async function confirmarCambios() {
+            const nuevoEstado = document.getElementById('estadoCartera').value;
+            const clienteId = '@Model.Id'; // Asegúrate de tener el ID en el modelo
+
+            try {
+                const response = await fetch('/Supervisor/ActualizarEstadoCartera', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        clienteId: clienteId,
+                        nuevoEstado: nuevoEstado
+                    })
+                });
+
+                if (response.ok) {
+                    // Actualizar estado original
+                    estadoOriginal = nuevoEstado;
+
+                    // Actualizar fecha de modificación
+                    const fechaActual = new Date().toLocaleString();
+                    document.getElementById('fechaModificacion').textContent = fechaActual;
+
+                    // Mostrar notificación
+                    document.getElementById('notificacionExito').style.display = 'block';
+
+                    // Ocultar botones
+                    document.getElementById('botonesAccion').style.display = 'none';
+
+                    // Ocultar notificación después de 3 segundos
+                    setTimeout(() => {
+                        document.getElementById('notificacionExito').style.display = 'none';
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar el estado');
+            }
+        }
+
+        // Descartar cambios
+        function descartarCambios() {
+            document.getElementById('estadoCartera').value = estadoOriginal;
+            document.getElementById('botonesAccion').style.display = 'none';
+        }
+    </script>
+}

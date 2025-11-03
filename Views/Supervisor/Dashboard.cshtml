@@ -45,6 +45,45 @@
     </div>
 </div>
 
+<!-- Búsqueda rápida de cliente y gestión de cartera -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    Gestión de Clientes y Cartera
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <form asp-action="BuscarCliente" method="get" class="d-flex">
+                            <div class="input-group">
+                                <input type="text" name="codigo" class="form-control" 
+                                       placeholder="Código o documento" required>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Buscar Cliente
+                                </button>
+                            </div>
+                        </form>
+                        <small class="text-muted">Buscar cliente existente por código o documento</small>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-grid">
+                            <a asp-action="ModificarEstado" class="btn btn-warning btn-lg">
+                                <i class="fas fa-edit me-2"></i>
+                                Modificar Estado de Cartera
+                            </a>
+                            <small class="text-muted">Actualizar estado de cartera de clientes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Funcionalidades de Gestión de Mora - HU-29 -->
 <div class="row mb-4">
     <div class="col-12">
@@ -81,11 +120,55 @@
     </div>
 </div>
 
+<!-- Acciones Rápidas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Acciones Rápidas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a asp-action="AsignarLineaCredito" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Línea Crédito
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a asp-action="EvaluacionesPendientes" class="btn btn-outline-warning btn-lg w-100">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            Evaluaciones
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a asp-action="GestionAsignacion" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fas fa-user-tie me-2"></i>
+                            Asignaciones
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a asp-action="ReporteMora" class="btn btn-outline-danger btn-lg w-100">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Reportes
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Gráficas -->
 <div class="row">
     <div class="col-md-6">
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-info text-white">Pagos últimos 6 meses</div>
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-chart-line me-2"></i>Pagos últimos 6 meses
+            </div>
             <div class="card-body">
                 <canvas id="pagosChart"></canvas>
             </div>
@@ -93,7 +176,9 @@
     </div>
     <div class="col-md-6">
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-secondary text-white">Top 5 clientes con más deuda</div>
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-chart-bar me-2"></i>Top 5 clientes con más deuda
+            </div>
             <div class="card-body">
                 <canvas id="deudasChart"></canvas>
             </div>
@@ -104,62 +189,75 @@
 <!-- Lista de pagos para validar -->
 <div class="row mb-4">
     <div class="col-md-12">
-        <h3 class="mb-3">Pagos Pendientes para Validación</h3>
-        @if (Model.PagosPendientes != null && Model.PagosPendientes.Any())
-        {
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Fecha</th>
-                        <th>Monto</th>
-                        <th>Estado</th>
-                        <th>Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var pago in Model.PagosPendientes)
-                    {
-                        <tr>
-                            <td>@(pago.Cliente?.Nombre ?? "Desconocido")</td>
-                            <td>@pago.Fecha.ToString("dd/MM/yyyy")</td>
-                            <td>S/ @pago.Monto.ToString("N2")</td>
-                            <td>
-                                @if (pago.Estado == "Pendiente")
-                                {
-                                    <span class="badge bg-warning text-dark">Pendiente</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success">@pago.Estado</span>
-                                }
-                            </td>
-                            <td>
-                                @if (pago.Estado == "Pendiente")
-                                {
-                                    <form asp-action="ValidarPago" method="post" style="display:inline;">
-                                        <input type="hidden" name="pagoId" value="@pago.Id" />
-                                        <button type="submit" class="btn btn-success btn-sm">
-                                            <i class="bi bi-check-circle"></i> Validar
-                                        </button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Ya validado</span>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <div class="alert alert-info">
-                No hay pagos pendientes de validación.
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Pagos Pendientes para Validación
+                </h5>
             </div>
-        }
+            <div class="card-body">
+                @if (Model.PagosPendientes != null && Model.PagosPendientes.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Fecha</th>
+                                    <th>Monto</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var pago in Model.PagosPendientes)
+                                {
+                                    <tr>
+                                        <td>@(pago.Cliente?.Nombre ?? "Desconocido")</td>
+                                        <td>@pago.Fecha.ToString("dd/MM/yyyy")</td>
+                                        <td>S/ @pago.Monto.ToString("N2")</td>
+                                        <td>
+                                            @if (pago.Estado == "Pendiente")
+                                            {
+                                                <span class="badge bg-warning text-dark">Pendiente</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">@pago.Estado</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (pago.Estado == "Pendiente")
+                                            {
+                                                <form asp-action="ValidarPago" method="post" style="display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="pagoId" value="@pago.Id" />
+                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                        <i class="fas fa-check-circle me-1"></i> Validar
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Ya validado</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No hay pagos pendientes de validación.
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 </div>
 
@@ -208,5 +306,42 @@
                 }
             }
         });
+
+        // Efectos hover para las tarjetas
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+                this.style.transition = 'transform 0.3s ease';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
     </script>
+
+    <style>
+        .card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+        }
+        
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+        }
+        
+        .table th {
+            border-top: none;
+            font-weight: 600;
+        }
+        
+        .badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+        }
+    </style>
 }

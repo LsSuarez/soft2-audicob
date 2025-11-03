@@ -26,12 +26,13 @@ namespace Audicob.Data
         public DbSet<ReporteAsignacion> ReportesAsignacion { get; set; }
         public DbSet<PerfilCliente> PerfilesCliente { get; set; }
         public DbSet<MetodoPagoCliente> MetodosPagoClientes { get; set; }
-        public DbSet<HistorialAuditoria> HistorialAuditorias { get; set; }
-
         
         // DbSets para funcionalidades de mora
         public DbSet<HistorialEstadoMora> HistorialEstadosMora { get; set; }
         public DbSet<FiltroGuardado> FiltrosGuardados { get; set; }
+        
+        // NUEVO: DbSet para Estado de Cartera
+        public DbSet<CarteraEstado> CarteraEstados { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -82,6 +83,9 @@ namespace Audicob.Data
             // Configuración para funcionalidades de mora
             modelBuilder.ApplyConfiguration(new HistorialEstadoMoraConfiguration());
             modelBuilder.ApplyConfiguration(new FiltroGuardadoConfiguration());
+            
+            // NUEVA: Configuración para CarteraEstado
+            modelBuilder.ApplyConfiguration(new CarteraEstadoConfiguration());
         }
     }
 }

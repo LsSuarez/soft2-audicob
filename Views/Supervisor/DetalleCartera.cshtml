@@ -1,0 +1,126 @@
+@model Audicob.Models.CarteraEstadoUpdateDto
+@{
+    ViewData["Title"] = "Detalle de Cartera";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h2 class="mb-0">DETALLE DE CARTERA</h2>
+                    <h4 class="mb-0">Estado Actual del Cliente</h4>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Información del Cliente -->
+                    <div class="client-info-section">
+                        <div class="info-card bg-white p-4 rounded border">
+                            <!-- Cliente -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary">Cliente</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <span class="form-control-plaintext fw-bold fs-5">@Model.ClienteNombre</span>
+                                </div>
+                            </div>
+
+                            <!-- Estado Actual -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary">Estado actual</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <span class="badge fs-6 @GetEstadoBadgeClass(Model.EstadoActual)">
+                                        @Model.EstadoActual
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- ComboBox para modificar estado -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary">Modificar Estado</label>
+                                </div>
+                                <div class="col-md-8">
+                                    @Html.DropDownListFor(
+                                        model => model.EstadoActual,
+                                        new List<SelectListItem>
+                                        {
+                                            new SelectListItem { Text = "Vigente", Value = "vigente" },
+                                            new SelectListItem { Text = "Morosa", Value = "morosa" },
+                                            new SelectListItem { Text = "Temprana", Value = "temprana" },
+                                            new SelectListItem { Text = "Castigada", Value = "castigada" },
+                                            new SelectListItem { Text = "Grave", Value = "grave" }
+                                        },
+                                        new { @class = "form-select" }
+                                    )
+                                </div>
+                            </div>
+
+                            <!-- Fecha de última modificación -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-primary">Última modificación</label>
+                                </div>
+                                <div class="col-md-8">
+                                    <span class="form-control-plaintext">
+                                        @(ViewBag.FechaModificacion ?? "No disponible")
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Mensaje de operación exitosa -->
+                            @if (ViewBag.OperacionExitosa != null && (bool)ViewBag.OperacionExitosa)
+                            {
+                                <div class="alert alert-success mt-4">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                                        <div>
+                                            <h5 class="alert-heading mb-1">Operación exitosa</h5>
+                                            <p class="mb-0">Estado actualizado el @ViewBag.FechaModificacion - @Model.ClienteNombre</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Botones -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="d-grid gap-2">
+                                        <form method="post" asp-action="ActualizarEstadoCartera">
+                                            <input type="hidden" name="ClienteId" value="@Model.ClienteId" />
+                                            <button type="submit" class="btn btn-primary btn-lg">
+                                                <i class="fas fa-check me-2"></i>
+                                                Confirmar
+                                            </button>
+                                        </form>
+                                        <a asp-action="Dashboard" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>
+                                            Volver al Dashboard
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetEstadoBadgeClass(string estado)
+    {
+        return estado?.ToLower() switch
+        {
+            "vigente" or "al día" => "bg-success",
+            "temprana" => "bg-info",
+            "morosa" or "moderada" => "bg-warning",
+            "castigada" or "grave" or "crítica" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

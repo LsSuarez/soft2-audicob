@@ -14,7 +14,6 @@ using iTextSharp.text.pdf;
 using ClosedXML.Excel;
 using System.IO;
 
-
 namespace Audicob.Controllers
 {
     [Authorize(Roles = "Supervisor")]
@@ -84,6 +83,52 @@ namespace Audicob.Controllers
             return View(vm);
         }
 
+        // GET: Supervisor/CrearClienteDemo
+        public async Task<IActionResult> CrearClienteDemo()
+        {
+            // Verificar si ya existe el cliente demo
+            var clienteExistente = await _db.Clientes
+                .FirstOrDefaultAsync(c => c.Documento == "DEMO001");
+
+            if (clienteExistente == null)
+            {
+                var clienteDemo = new Cliente
+                {
+                    Nombre = "Cliente Demo",
+                    Documento = "DEMO001",
+                    IngresosMensuales = 5000.00m,
+                    DeudaTotal = 2500.00m,
+                    EstadoMora = "Temprana",
+                    FechaActualizacion = DateTime.Now.AddDays(-15),
+                    EstadoAdmin = "Activo"
+                };
+
+                _db.Clientes.Add(clienteDemo);
+                await _db.SaveChangesAsync();
+
+                // Crear también el estado de cartera inicial
+                var carteraEstado = new CarteraEstado
+                {
+                    ClienteId = clienteDemo.Id,
+                    Estado = "vigente",
+                    Comentario = "Cliente demo creado automáticamente",
+                    FechaModificacion = DateTime.Now,
+                    UsuarioModificacion = "Sistema"
+                };
+
+                _db.CarteraEstados.Add(carteraEstado);
+                await _db.SaveChangesAsync();
+
+                TempData["Success"] = "Cliente demo creado exitosamente.";
+                return RedirectToAction("PerfilCliente", new { id = clienteDemo.Id });
+            }
+            else
+            {
+                TempData["Info"] = "El cliente demo ya existe.";
+                return RedirectToAction("PerfilCliente", new { id = clienteExistente.Id });
+            }
+        }
+
         // HU7: Validar pago
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -127,7 +172,7 @@ namespace Audicob.Controllers
             return RedirectToAction("Dashboard");
         }
 
-    // GET: Asignar línea de crédito (HU3)
+        // GET: Asignar línea de crédito (HU3)
         public async Task<IActionResult> AsignarLineaCredito()
         {
             var clientes = await _db.Clientes
@@ -189,6 +234,7 @@ namespace Audicob.Controllers
             TempData["Success"] = $"Línea de crédito asignada a {cliente.Nombre}.";
             return RedirectToAction("AsignarLineaCredito");
         }
+
         // HU1: Ver informe financiero detallado
         public async Task<IActionResult> VerInformeFinanciero(int id)
         {
@@ -279,7 +325,7 @@ namespace Audicob.Controllers
 
             if (evaluacion == null)
             {
-                TempData["Error"] = "Evaluación no encontrada.";
+                TempData["Error"] = "Evaluación no encontrado.";
                 return RedirectToAction("EvaluacionesPendientes");
             }
 
@@ -382,7 +428,7 @@ namespace Audicob.Controllers
 
             var vm = new PerfilClienteViewModel
             {
-                ClienteInfo = cliente,  // CORREGIDO: Cambié "Cliente" a "ClienteInfo"
+                ClienteInfo = cliente,
                 TransaccionesRecientes = transacciones,
                 TotalPagos = cliente.Pagos.Sum(p => p.Monto),
                 PagosValidados = cliente.Pagos.Count(p => p.Validado),
@@ -391,6 +437,199 @@ namespace Audicob.Controllers
 
             return View(vm);
         }
+
+        // ==========================================================
+        // HU: MODIFICAR ESTADO DE CARTERA - FUNCIONALIDADES CORREGIDAS
+        // ==========================================================
+
+        // GET: Supervisor/ModificarEstado
+        public IActionResult ModificarEstado()
+        {
+            return View();
+        }
+
+        // POST: Supervisor/BuscarClientePorDNI
+        [HttpPost]
+        public async Task<JsonResult> BuscarClientePorDNI([FromBody] BuscarClienteRequest request)
+        {
+            try
+            {
+                var cliente = await _db.Clientes
+                    .FirstOrDefaultAsync(c => c.Documento == request.DNI);
+
+                if (cliente != null)
+                {
+                    // Buscar el estado de cartera más reciente
+                    var estadoCartera = await _db.CarteraEstados
+                        .Where(ce => ce.ClienteId == cliente.Id)
+                        .OrderByDescending(ce => ce.FechaModificacion)
+                        .FirstOrDefaultAsync();
+
+                    var estadoActual = estadoCartera?.Estado ?? "Vigente";
+
+                    var clienteDto = new
+                    {
+                        Id = cliente.Id,
+                        DNI = cliente.Documento,
+                        Nombre = cliente.Nombre,
+                        Estado = estadoActual
+                    };
+
+                    return Json(new { success = true, data = clienteDto });
+                }
+                else
+                {
+                    return Json(new { success = false, message = "Cliente no encontrado" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error en la búsqueda" });
+            }
+        }
+        // POST: Supervisor/DescartarCambiosCartera
+        [HttpPost]
+        public async Task<JsonResult> DescartarCambiosCartera([FromBody] DescartarCambiosRequest request)
+        {
+            try
+            {
+                var cliente = await _db.Clientes.FindAsync(request.ClienteId);
+                if (cliente == null)
+                {
+                    return Json(new { success = false, message = "Cliente no encontrado" });
+                }
+
+                var estadoActual = await _db.CarteraEstados
+                    .Where(ce => ce.ClienteId == request.ClienteId)
+                    .OrderByDescending(ce => ce.FechaModificacion)
+                    .FirstOrDefaultAsync();
+
+                return Json(new { 
+                    success = true, 
+                    estadoActual = estadoActual?.Estado ?? "Vigente",
+                    message = "Cambios descartados correctamente"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error al descartar cambios" });
+            }
+        }
+
+        // HU: Modificar Estado de Cartera - Vistas existentes (mantenidas para compatibilidad)
+        // GET: Supervisor/DetalleCartera/5
+public async Task<IActionResult> DetalleCartera(int id)
+{
+    var cliente = await _db.Clientes
+        .FirstOrDefaultAsync(c => c.Id == id);
+
+    if (cliente == null)
+    {
+        TempData["Error"] = "Cliente no encontrado.";
+        return RedirectToAction("Dashboard");
+    }
+
+    // Buscar estado de cartera existente o crear uno nuevo
+    var carteraEstado = await _db.CarteraEstados
+        .FirstOrDefaultAsync(c => c.ClienteId == id);
+
+    if (carteraEstado == null)
+    {
+        // Crear estado por defecto si no existe - USAR DateTime.UtcNow para PostgreSQL
+        carteraEstado = new CarteraEstado 
+        { 
+            ClienteId = id, 
+            Estado = "Vigente",
+            FechaModificacion = DateTime.UtcNow, // CAMBIADO: DateTime.Now -> DateTime.UtcNow
+            UsuarioModificacion = User.Identity?.Name ?? "Sistema"
+        };
+        _db.CarteraEstados.Add(carteraEstado);
+        await _db.SaveChangesAsync();
+    }
+
+    var model = new Audicob.Models.CarteraEstadoUpdateDto
+    {
+        Id = carteraEstado.Id,
+        ClienteId = cliente.Id,
+        ClienteNombre = cliente.Nombre,
+        Estado = carteraEstado.Estado,
+        EstadoActual = carteraEstado.Estado,
+        Comentario = carteraEstado.Comentario
+    };
+
+    ViewBag.FechaModificacion = carteraEstado.FechaModificacion;
+    return View(model);
+}
+
+// POST: Supervisor/ActualizarEstadoCartera (versión original mantenida)
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraEstadoUpdateDto model)
+{
+    if (ModelState.IsValid)
+    {
+        try
+        {
+            var carteraEstado = await _db.CarteraEstados
+                .FirstOrDefaultAsync(c => c.ClienteId == model.ClienteId);
+
+            var user = await _userManager.GetUserAsync(User);
+            var userName = user?.FullName ?? User.Identity?.Name ?? "Sistema";
+
+            if (carteraEstado != null)
+            {
+                // Actualizar el estado de cartera
+                carteraEstado.Estado = model.Estado;
+                carteraEstado.Comentario = model.Comentario;
+                carteraEstado.FechaModificacion = DateTime.UtcNow;
+                carteraEstado.UsuarioModificacion = userName;
+
+                _db.CarteraEstados.Update(carteraEstado);
+            }
+
+            await _db.SaveChangesAsync();
+
+            // Preparar la respuesta de éxito
+            var cliente = await _db.Clientes.FindAsync(model.ClienteId);
+            ViewBag.OperacionExitosa = true;
+            ViewBag.ClienteNombre = cliente?.Nombre ?? "Cliente";
+            ViewBag.FechaModificacion = DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm");
+
+            TempData["Success"] = "Estado de cartera actualizado exitosamente.";
+
+            // Actualizar el modelo para la vista
+            model.EstadoActual = model.Estado;
+            return View("DetalleCartera", model);
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = $"Error al actualizar el estado: {ex.Message}";
+            ModelState.AddModelError("", "Error al guardar los cambios.");
+        }
+    }
+
+    // Si hay errores, recargar los datos del cliente
+    var clienteReload = await _db.Clientes.FindAsync(model.ClienteId);
+    if (clienteReload != null)
+    {
+        model.ClienteNombre = clienteReload.Nombre;
+        model.EstadoActual = (await _db.CarteraEstados
+            .FirstOrDefaultAsync(c => c.ClienteId == model.ClienteId))?.Estado ?? "Vigente";
+    }
+
+    return View("DetalleCartera", model);
+}
+        // GET: Supervisor/DescartarCambios/5 (versión original mantenida)
+        public async Task<IActionResult> DescartarCambios(int id)
+        {
+            // Simplemente redirige de vuelta al detalle sin guardar cambios
+            TempData["Info"] = "Cambios descartados correctamente.";
+            return RedirectToAction("DetalleCartera", new { id });
+        }
+
+        // ==========================================================
+        // RESTANTE DEL CÓDIGO EXISTENTE (NO MODIFICADO)
+        // ==========================================================
 
         private async Task<Cliente?> TryGetClienteAsync(int clienteId)
         {
@@ -443,6 +682,7 @@ namespace Audicob.Controllers
             TempData["Success"] = "Asignaciones reportadas exitosamente.";
             return RedirectToAction("GestionAsignacion");
         }
+
         // HU11 Ver reportes anteriores
         public async Task<IActionResult> ReportesAnteriores()
         {
@@ -452,6 +692,7 @@ namespace Audicob.Controllers
 
             return PartialView("_ReportesAnteriores", reportes);
         }
+
         // HU11: Exportar reportes a PDF y Excel
         public async Task<IActionResult> ExportarPDF()
         {
@@ -818,7 +1059,7 @@ namespace Audicob.Controllers
                 .ToListAsync();
                 
             if (clientesVacios.Any())
-            {
+                {
                 _db.Clientes.RemoveRange(clientesVacios);
                 await _db.SaveChangesAsync();
             }
@@ -973,227 +1214,25 @@ namespace Audicob.Controllers
                 return RedirectToAction("ReporteMora");
             }
         }
-        // ===============================
-        // ANÁLISIS DE PAGOS HU-04
-        // ===============================
-        [HttpGet]
-        public IActionResult AnalisisPagos()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        public IActionResult AnalisisPagosGenerar(bool parcial = false)
-        {
-            // Consulta de pagos desde la tabla HistorialCredito
-            var total = _db.HistorialCreditos.Count();
-            if (total == 0)
-            {
-                TempData["Error"] = "No hay registros en HistorialCredito para analizar.";
-                return RedirectToAction("AnalisisPagos");
-            }
-
-            var pagados = _db.HistorialCreditos.Count(h => h.EstadoPago == "Pagado");
-            var pendientes = _db.HistorialCreditos.Count(h => h.EstadoPago == "Pendiente");
-
-            var porcentajePagados = (double)pagados / total * 100;
-            var porcentajePendientes = (double)pendientes / total * 100;
-
-            // Enviar resultados a la vista mediante ViewBag o ViewModel
-            ViewBag.Pagados = porcentajePagados.ToString("0.00");
-            ViewBag.Pendientes = porcentajePendientes.ToString("0.00");
-
-            if (parcial)
-                return PartialView("_GraficoPagosPartial");
-            else
-                return View("AnalisisPagos");
-        }
-
-        [HttpPost]
-        public IActionResult AnalisisPagosCalcular(bool parcial = false)
-        {
-            var data = _db.HistorialCreditos
-                .GroupBy(h => h.FechaOperacion.Date)
-                .Select(g => new
-                {
-                    Fecha = g.Key,
-                    MontoTotal = g.Sum(x => x.MontoOperacion)
-                })
-                .OrderBy(g => g.Fecha)
-                .ToList();
-
-            if (data.Count == 0)
-            {
-                TempData["Error"] = "No hay registros en HistorialCredito para calcular proyección.";
-                return RedirectToAction("AnalisisPagos");
-            }
-
-            double totalEstimado = data.Sum(x => Convert.ToDouble(x.MontoTotal));
-
-
-            // Convertir datos para la vista
-            ViewBag.Fechas = data.Select(d => d.Fecha.ToString("dd/MM/yyyy")).ToList();
-            ViewBag.Montos = data.Select(d => d.MontoTotal).ToList();
-            ViewBag.TotalEstimado = totalEstimado.ToString("0.00");
-
-            if (parcial)
-                return PartialView("_GraficoProyeccionPartial");
-            else
-                return View("AnalisisPagos");
-        }
-
-        // ==========================================================
-        // HU-33: REPORTES CREDITICIOS (Listado + Detalle)
-        // ==========================================================
-
-        [HttpGet]
-        public async Task<IActionResult> ReportesCrediticios()
-        {
-            // Cargar todos los registros del historial de créditos
-            var historial = await _db.HistorialCreditos
-                .OrderByDescending(h => h.FechaOperacion)
-                .ToListAsync();
-
-            // Retorna la vista personalizada "ReportesCrediticios"
-            return View("ReportesCrediticios", historial);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> DetalleReportesCrediticios(int id)
-        {
-            // Busca un registro específico por su ID
-            var credito = await _db.HistorialCreditos
-                .FirstOrDefaultAsync(h => h.Id == id);
-
-            if (credito == null)
-            {
-                return NotFound();
-            }
-
-            // Retorna la vista personalizada "DetalleReportesCrediticios"
-            return View("DetalleReportesCrediticio", credito);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> FiltrarReportesCrediticios(string estado)
-        {
-            var query = _db.HistorialCreditos.AsQueryable();
-
-            if (!string.IsNullOrEmpty(estado))
-            {
-                query = query.Where(h => h.EstadoPago == estado);
-            }
-
-            var filtrados = await query
-                .OrderByDescending(h => h.FechaOperacion)
-                .ToListAsync();
-
-            return PartialView("_TablaReportesCrediticiosPartial", filtrados);
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> ExportarHistorialCreditoPDF(int id)
-        {
-            var credito = await _db.HistorialCreditos.FirstOrDefaultAsync(h => h.Id == id);
-            if (credito == null)
-                return NotFound();
-
-            var pdfBytes = GenerarPDFHistorialCredito(credito);
-
-            return File(pdfBytes, "application/pdf", $"HistorialCredito_{credito.Id}.pdf");
-        }
-private byte[] GenerarPDFHistorialCredito(HistorialCredito credito)
-{
-    using (var stream = new MemoryStream())
-    {
-        // Crear documento iTextSharp
-        var document = new Document(PageSize.A4, 50, 50, 50, 50);
-        PdfWriter.GetInstance(document, stream);
-        document.Open();
-
-        // Definir colores RGB
-        BaseColor blue = new BaseColor(0, 0, 255);
-        BaseColor gray = new BaseColor(128, 128, 128);
-        BaseColor lightGray = new BaseColor(211, 211, 211);
-
-        // Fuentes
-        var tituloFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 20, blue);
-        var subFont = FontFactory.GetFont(FontFactory.HELVETICA, 10, gray);
-        var boldFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12);
-        var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-
-        // =======================
-        // Encabezado
-        // =======================
-        var headerTable = new PdfPTable(1) { WidthPercentage = 100 };
-
-        // Imagen placeholder (puedes reemplazar con tu logo)
-       
-
-        // Texto del encabezado
-        var headerText = new PdfPCell();
-        headerText.Border = Rectangle.NO_BORDER;
-        headerText.AddElement(new Paragraph("Audicob - Reporte de Crédito", tituloFont));
-        headerText.AddElement(new Paragraph($"Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm}", subFont));
-        headerTable.AddCell(headerText);
-
-        document.Add(headerTable);
-        document.Add(new Paragraph("\n")); // espacio
-
-        // =======================
-        // Tabla de detalles
-        // =======================
-        var table = new PdfPTable(2) { WidthPercentage = 100 };
-        table.SetWidths(new float[] { 200, 300 });
-
-        void AddRow(string campo, string valor)
-        {
-            var cell1 = new PdfPCell(new Phrase(campo, boldFont))
-            {
-                BorderWidthBottom = 1,
-                BorderColorBottom = lightGray,
-                PaddingBottom = 5
-            };
-            var cell2 = new PdfPCell(new Phrase(valor ?? "-", normalFont))
-            {
-                BorderWidthBottom = 1,
-                BorderColorBottom = lightGray,
-                PaddingBottom = 5
-            };
-
-            table.AddCell(cell1);
-            table.AddCell(cell2);
-        }
-
-        AddRow("Nombre del Cliente", credito.NombreCliente);
-        AddRow("DNI del Cliente", credito.DniCliente);
-        AddRow("Código del Cliente", credito.CodigoCliente);
-        AddRow("Tipo de Operación", credito.TipoOperacion);
-        AddRow("Monto de la Operación", $"{credito.MontoOperacion:C}");
-        AddRow("Fecha de la Operación", credito.FechaOperacion.ToString("dd/MM/yyyy"));
-        AddRow("Estado de Pago", credito.EstadoPago);
-        AddRow("Producto / Servicio", credito.ProductoServicio);
-        AddRow("Días de Crédito", credito.DiasCredito.ToString());
-        AddRow("Observaciones", credito.Observaciones);
-
-        document.Add(table);
-        document.Add(new Paragraph("\n")); // espacio
-
-        // =======================
-        // Pie de página
-        // =======================
-        var footer = new Paragraph($"Audicob © {DateTime.Now.Year}", subFont)
-        {
-            Alignment = Element.ALIGN_CENTER
-        };
-        document.Add(footer);
-
-        document.Close();
-
-        return stream.ToArray();
     }
-}
 
+    // ==========================================================
+    // CLASES PARA LAS NUEVAS FUNCIONALIDADES
+    // ==========================================================
 
+    public class BuscarClienteRequest
+    {
+        public string DNI { get; set; }
+    }
+
+    public class ActualizarEstadoRequest
+    {
+        public int ClienteId { get; set; }
+        public string NuevoEstado { get; set; }
+    }
+
+    public class DescartarCambiosRequest
+    {
+        public int ClienteId { get; set; }
     }
 }

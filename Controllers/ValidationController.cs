@@ -55,7 +55,6 @@ namespace Audicob.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult ValidateData(PaymentValidationViewModel model)
         {
-            // Debug info
             System.Console.WriteLine($"🔍 ValidateData llamado - ClientId: '{model.ClientId}'");
 
             if (!ModelState.IsValid)
@@ -122,17 +121,58 @@ namespace Audicob.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Synchronize(int id)
         {
+            System.Console.WriteLine($"🔄 Synchronize llamado - ID: {id}");
+
             var validation = _validations.FirstOrDefault(v => v.Id == id);
             if (validation != null)
             {
                 validation.Status = ValidationStatus.Synchronized;
                 validation.SynchronizedAt = DateTime.Now;
                 validation.ValidationMessage = "Pago sincronizado exitosamente";
+                
+                System.Console.WriteLine($"✅ Sincronizado: {validation.VoucherNumber} para {validation.Cliente?.Nombre}");
+                
+                TempData["SuccessMessage"] = $"✅ Pago sincronizado exitosamente para {validation.Cliente?.Nombre}.";
+            }
+            else
+            {
+                System.Console.WriteLine($"❌ Validación no encontrada con ID: {id}");
+                TempData["ErrorMessage"] = "❌ No se encontró la validación para sincronizar.";
             }
 
-            TempData["SuccessMessage"] = "✅ Datos sincronizados exitosamente.";
+            return RedirectToAction("Index");
+        }
+
+        // Nueva acción para sincronización masiva
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SynchronizeAll()
+        {
+            var pendientes = _validations.Where(v => v.Status == ValidationStatus.Validated).ToList();
+            int sincronizados = 0;
+
+            foreach (var validation in pendientes)
+            {
+                validation.Status = ValidationStatus.Synchronized;
+                validation.SynchronizedAt = DateTime.Now;
+                validation.ValidationMessage = "Pago sincronizado masivamente";
+                sincronizados++;
+            }
+
+            System.Console.WriteLine($"🔄 Sincronización masiva: {sincronizados} registros");
+
+            if (sincronizados > 0)
+            {
+                TempData["SuccessMessage"] = $"✅ Sincronización masiva completada. {sincronizados} pagos marcados como sincronizados.";
+            }
+            else
+            {
+                TempData["InfoMessage"] = "ℹ️ No hay pagos pendientes para sincronizar.";
+            }
+
             return RedirectToAction("Index");
         }
 
@@ -152,6 +192,7 @@ namespace Audicob.Controllers
             var validRecords = _validations.Count(v => v.Status == ValidationStatus.Validated || 
                                                      v.Status == ValidationStatus.Synchronized);
             var errorRecords = _validations.Count(v => v.Status == ValidationStatus.Error);
+            var pendingSync = _validations.Count(v => v.Status == ValidationStatus.Validated);
 
             return new ValidationMetrics
             {
@@ -164,7 +205,8 @@ namespace Audicob.Controllers
                 TotalClientes = totalClientes,
                 ClientesAlDia = clientesAlDia,
                 ClientesEnMora = clientesEnMora,
-                MontoTotalDeuda = montoTotalDeuda
+                MontoTotalDeuda = montoTotalDeuda,
+                PendientesSincronizacion = pendingSync
             };
         }
     }

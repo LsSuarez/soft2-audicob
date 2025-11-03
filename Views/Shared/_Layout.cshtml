@@ -9,13 +9,10 @@
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-
+    
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
 
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
     <!-- Estilos personalizados -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Audicob.styles.css" asp-append-version="true" />
@@ -27,111 +24,170 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
             <div class="container-fluid">
-                <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">AUDICOB ERP</a>
+                <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-chart-line me-2"></i>AUDICOB ERP
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
                     aria-controls="mainNav" aria-expanded="false" aria-label="Menú">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="mainNav">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <!-- Navegación general -->
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Inicio</a>
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home me-1"></i>Inicio
+                            </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Ayuda">Ayuda</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Privacy">Privacidad</a>
-                        </li>
+
                         @using Microsoft.AspNetCore.Identity
                         @inject SignInManager<ApplicationUser> SignInManager
 
                         @if (SignInManager.IsSignedIn(User))
                         {
-                            @* --- CLIENTE --- *@
+                            <!-- CLIENTE -->
                             @if (User.IsInRole("Cliente"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Cliente" asp-action="DetalleDeudaTotal">
-                                        Deudas
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="clienteDropdown" role="button" 
+                                       data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-user-circle me-1"></i>Mi Cuenta
                                     </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Cliente" asp-action="MiPerfil">
-                                        Mi Perfil
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Cliente" asp-action="MetodoPago">
-                                        Metodos de Pago
-                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="clienteDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Cliente" asp-action="Dashboard">
+                                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" href="@Url.Action("EstadoCuenta", "Cliente")">
+                                                <i class="fas fa-file-invoice-dollar me-2"></i>Estado de Cuenta
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Cliente" asp-action="DetalleDeudaTotal">
+                                                <i class="fas fa-credit-card me-2"></i>Gestionar Deudas
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Cliente" asp-action="MetodoPago">
+                                                <i class="fas fa-wallet me-2"></i>Métodos de Pago
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Cliente" asp-action="MiPerfil">
+                                                <i class="fas fa-id-card me-2"></i>Mi Perfil
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             }
-                            @* --- ASESOR --- *@
+
+                            <!-- ASESOR DE COBRANZA -->
                             @if (User.IsInRole("AsesorCobranza"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Asesor" asp-action="HistorialCredito">
-                                        Historial crediticio
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="asesorDropdown" role="button" 
+                                       data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-hand-holding-usd me-1"></i>Cobranza
                                     </a>
+                                    <ul class="dropdown-menu" aria-labelledby="asesorDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Asesor" asp-action="HistorialCredito">
+                                                <i class="fas fa-history me-2"></i>Historial Crediticio
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Asesor" asp-action="Index">
+                                                <i class="fas fa-users me-2"></i>Gestión de Clientes
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             }
 
-                            @* --- SUPERVISOR --- *@
+                            <!-- SUPERVISOR -->
                             @if (User.IsInRole("Supervisor"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="ClienteBusqueda" asp-action="Index">
-                                        Evaluar situación financiera
-                                    </a>
-                                </li>
-
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="AsigSupervisor" asp-action="Index">
-                                        Segmentar clientes
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Supervisor" asp-action="GestionAsignacion">
-                                        Gestionar la asignación
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Supervisor" asp-action="AsignarLineaCredito">
-                                        Asignar Credito
-                                    </a>
-                                </li>
                                 <li class="nav-item dropdown">
-                                    @await Html.PartialAsync("_NotificacionesPartial")
+                                    <a class="nav-link dropdown-toggle" href="#" id="supervisorDropdown" role="button" 
+                                       data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-user-shield me-1"></i>Supervisión
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="supervisorDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="ClienteBusqueda" asp-action="Index">
+                                                <i class="fas fa-chart-bar me-2"></i>Evaluar Situación Financiera
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="AsigSupervisor" asp-action="Index">
+                                                <i class="fas fa-sitemap me-2"></i>Segmentar Clientes
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Supervisor" asp-action="GestionAsignacion">
+                                                <i class="fas fa-tasks me-2"></i>Gestionar Asignación
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Supervisor" asp-action="AsignarLineaCredito">
+                                                <i class="fas fa-credit-card me-2"></i>Asignar Línea de Crédito
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            @await Html.PartialAsync("_NotificacionesPartial")
+                                        </li>
+                                    </ul>
                                 </li>
                             }
 
-                            @* --- ADMINISTRADOR (GERENTE) --- *@
+                            <!-- ADMINISTRADOR (GERENTE) -->
                             @if (User.IsInRole("Administrador"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="ClienteGerente" asp-action="Index">
-                                        Confirmar evaluación revisada
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" 
+                                       data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-cogs me-1"></i>Administración
                                     </a>
-                                </li>
-                            <li class="nav-item">
-                                    <a class="nav-link" asp-controller="Validation" asp-action="Index">
-                            <i class="bi bi-check-circle"></i> Validar Pagos
-                                    </a>
-                                </li>
-                            }    
-                            }
-                            @* --- CLIENTE --- *@
-                            @if (User.IsInRole("Cliente"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-controller="EstadoCuenta" asp-action="Index">
-                                        <i class="bi bi-wallet2"></i> Monitorear estado de cuenta
-                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="ClienteGerente" asp-action="Index">
+                                                <i class="fas fa-check-double me-2"></i>Confirmar Evaluaciones
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Validation" asp-action="Index">
+                                                <i class="fas fa-check-circle me-2"></i>Validar Pagos
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Reportes" asp-action="Index">
+                                                <i class="fas fa-chart-pie me-2"></i>Reportes
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                             }
                         }
+
+                        <!-- Enlaces generales para todos los usuarios -->
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Ayuda">
+                                <i class="fas fa-question-circle me-1"></i>Ayuda
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Privacy">
+                                <i class="fas fa-shield-alt me-1"></i>Privacidad
+                            </a>
+                        </li>
                     </ul>
+                    
+                    <!-- Usuario y login -->
                     <partial name="_LoginPartial" />
                 </div>
             </div>
@@ -143,6 +199,7 @@
         @if (TempData["Success"] != null)
         {
             <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
                 @TempData["Success"]
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
@@ -150,6 +207,7 @@
         @if (TempData["Error"] != null)
         {
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
                 @TempData["Error"]
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
@@ -162,7 +220,8 @@
 
     <footer class="bg-light border-top py-3 mt-auto">
         <div class="container text-center text-muted small">
-            &copy; 2025 - AUDICOB | <a asp-controller="Home" asp-action="Privacy">Política de Privacidad</a>
+            <i class="fas fa-copyright me-1"></i> 2025 - AUDICOB ERP | 
+            <a asp-controller="Home" asp-action="Privacy" class="text-decoration-none">Política de Privacidad</a>
         </div>
     </footer>
 

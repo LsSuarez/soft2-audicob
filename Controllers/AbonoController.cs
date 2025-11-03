@@ -48,22 +48,52 @@ namespace Audicob.Controllers
                 return RedirectToAction("Dashboard", "Cliente");
             }
 
+            // Convertir las transacciones de la base de datos a ViewModels
+            var transaccionesDb = await _db.Transacciones
+                .Where(t => t.ClienteId == cliente.Id)
+                .OrderByDescending(t => t.Fecha)
+                .ToListAsync();
+
+            var transaccionesVm = transaccionesDb.Select(t => new TransaccionViewModel
+            {
+                Id = t.Id,
+                Fecha = t.Fecha.ToString("dd/MM/yyyy"),
+                Descripcion = t.Descripcion,
+                Concepto = t.Descripcion, // Puedes ajustar esto según tu modelo
+                Monto = t.Monto,
+                Estado = t.Estado
+            }).ToList();
+
             var estadoCuenta = new EstadoCuentaViewModel
             {
+                Cliente = cliente.Nombre,
+                Fecha = DateTime.Now,
                 TotalDeuda = cliente.Deuda.TotalAPagar,
                 Capital = cliente.Deuda.Monto,
                 Intereses = cliente.Deuda.PenalidadCalculada,
-                HistorialTransacciones = await _db.Transacciones
-                    .Where(t => t.ClienteId == cliente.Id)
-                    .OrderByDescending(t => t.Fecha)
-                    .ToListAsync()
+                HistorialTransacciones = transaccionesVm,
+                // Calcular los saldos basados en las transacciones
+                SaldoAnterior = CalcularSaldoAnterior(transaccionesDb),
+                TotalAbonos = transaccionesDb.Where(t => t.Monto > 0).Sum(t => t.Monto),
+                TotalCargos = Math.Abs(transaccionesDb.Where(t => t.Monto < 0).Sum(t => t.Monto)),
+                SaldoActual = cliente.Deuda.TotalAPagar
             };
 
             return View(estadoCuenta);
         }
 
+        private decimal CalcularSaldoAnterior(List<Models.Transaccion> transacciones)
+        {
+            // Lógica para calcular el saldo anterior basado en transacciones anteriores
+            // Por ahora, usamos un cálculo simple
+            if (transacciones.Count == 0) return 0;
+            
+            var primeraTransaccion = transacciones.OrderBy(t => t.Fecha).First();
+            return primeraTransaccion.Monto > 0 ? primeraTransaccion.Monto : 0;
+        }
+
         // Filtrar historial (HU6)
-        public async Task<IActionResult> FiltrarHistorial(string searchTerm, decimal? montoMin, decimal? montoMax, DateTime? fechaDesde, DateTime? fechaHasta)
+        public async Task<IActionResult> FiltrarHistorial(string searchTerm, DateTime? fechaDesde, DateTime? fechaHasta)
         {
             var userId = User.Identity.Name;
 
@@ -85,14 +115,6 @@ namespace Audicob.Controllers
                 transacciones = transacciones.Where(t => t.Descripcion.Contains(searchTerm) || 
                                                          t.NumeroTransaccion.Contains(searchTerm));
 
-            // Filtrar por monto mínimo
-            if (montoMin.HasValue)
-                transacciones = transacciones.Where(t => t.Monto >= montoMin);
-
-            // Filtrar por monto máximo
-            if (montoMax.HasValue)
-                transacciones = transacciones.Where(t => t.Monto <= montoMax);
-
             // Filtrar por rango de fechas
             if (fechaDesde.HasValue)
                 transacciones = transacciones.Where(t => t.Fecha >= fechaDesde.Value);
@@ -100,12 +122,26 @@ namespace Audicob.Controllers
             if (fechaHasta.HasValue)
                 transacciones = transacciones.Where(t => t.Fecha <= fechaHasta.Value);
 
-            var historial = await transacciones
+            var historialDb = await transacciones
                 .OrderByDescending(t => t.Fecha)
                 .ToListAsync();
 
+            // Convertir a ViewModels
+            var historial = historialDb.Select(t => new TransaccionViewModel
+            {
+                Id = t.Id,
+                Fecha = t.Fecha.ToString("dd/MM/yyyy"),
+                Descripcion = t.Descripcion,
+                Concepto = t.Descripcion,
+                Monto = t.Monto,
+                Estado = t.Estado
+            }).ToList();
+
             return PartialView("_HistorialTransacciones", historial);
         }
+
+        // Los demás métodos permanecen igual...
+        // VerComprobante, ReenviarComprobante, ExportarPdf, etc.
 
         // Ver detalle del comprobante de pago (HU6)
         public async Task<IActionResult> VerComprobante(int transaccionId)
@@ -192,25 +228,25 @@ namespace Audicob.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            var historial = await _db.Transacciones
+            var historialDb = await _db.Transacciones
                 .Where(t => t.ClienteId == cliente.Id)
                 .OrderByDescending(t => t.Fecha)
                 .ToListAsync();
 
-            if (!historial.Any())
+            if (!historialDb.Any())
             {
                 TempData["Warning"] = "No tiene transacciones para exportar.";
                 return RedirectToAction("EstadoCuenta");
             }
 
-            var pdfContent = GeneratePdfContent(cliente, historial);
+            var pdfContent = GeneratePdfContent(cliente, historialDb);
             var pdfBytes = GeneratePdf(pdfContent);
 
             return File(pdfBytes, "application/pdf", $"Historial_{cliente.Nombre}_{DateTime.Now:yyyyMMdd}.pdf");
         }
 
         // Generar contenido HTML mejorado para el PDF
-        private string GeneratePdfContent(Cliente cliente, List<Transaccion> historial)
+        private string GeneratePdfContent(Cliente cliente, List<Models.Transaccion> historial)
         {
             var totalTransacciones = historial.Sum(t => t.Monto);
             

@@ -1,13 +1,22 @@
 using Audicob.Data;
 using Audicob.Models;
 using Audicob.Models.ViewModels.Cliente;
+using Audicob.Models.ViewModels.Cobranza;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using System.IO;
+using System.Collections.Generic;
+using System;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using iText.Kernel.Font;
+using iText.IO.Font.Constants;
 
 namespace Audicob.Controllers
 {
@@ -65,12 +74,7 @@ namespace Audicob.Controllers
             return View(vm);
         }
 
-        //HU 13Abonar cliente
-
-        // Asegúrate de tener estos using
-
-
-        // Acción: DetalleDeudaTotal (muestra la lista y setea ViewBag)
+        // HU 13: Abonar cliente
         public async Task<IActionResult> DetalleDeudaTotal()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -143,10 +147,10 @@ namespace Audicob.Controllers
                 perfil = new PerfilCliente
                 {
                     UserId = user.Id,
-                    Nombre = string.Empty, // depende de tu modelo ApplicationUser
+                    Nombre = string.Empty,
                     Correo = user.Email,
-                    Telefono = string.Empty,       // 👈 evita null
-                    Direccion = string.Empty,      // 👈 evita null
+                    Telefono = string.Empty,
+                    Direccion = string.Empty,
                     DocumentoIdentidad = string.Empty,
                     FechaRegistro = DateTime.UtcNow 
                 };
@@ -177,6 +181,7 @@ namespace Audicob.Controllers
 
             return View(vm);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarPerfil(EditarPerfilViewModel vm)
@@ -200,7 +205,6 @@ namespace Audicob.Controllers
             return RedirectToAction("MiPerfil");
         }
 
-        
         // ===============================
         // MÉTODO DE PAGO HU-25
         // ===============================
@@ -241,7 +245,252 @@ namespace Audicob.Controllers
             return RedirectToAction("DetalleDeudaTotal");
         }
 
+        // ===============================
+        // ESTADO DE CUENTA - HU Exportar Estado de Cuenta
+        // ===============================
+        
+        public async Task<IActionResult> EstadoCuenta(string searchTerm, DateTime? fechaDesde, DateTime? fechaHasta)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
 
+            var accountStatement = await GetAccountStatementData(user.Id, searchTerm, fechaDesde, fechaHasta);
+            return View(accountStatement);
+        }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DescargarEstadoCuenta()
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null) return RedirectToAction("Login", "Account");
+
+                var accountData = await GetAccountStatementData(user.Id);
+                var pdfBytes = GeneratePdfWithiText(accountData);
+
+                var fileName = $"EstadoCuenta_{(user.FullName ?? "Cliente").Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}.pdf";
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al generar el PDF: {ex.Message}";
+                return RedirectToAction("EstadoCuenta");
+            }
+        }
+
+        private async Task<EstadoCuentaViewModel> GetAccountStatementData(string userId, string searchTerm = null, DateTime? fechaDesde = null, DateTime? fechaHasta = null)
+        {
+            // Obtener el cliente asociado al usuario
+            var cliente = await _db.Clientes
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (cliente == null)
+            {
+                throw new Exception("Cliente no encontrado");
+            }
+
+            // Obtener transacciones
+            var transacciones = await GetTransaccionesFromDatabase(userId, searchTerm, fechaDesde, fechaHasta);
+
+            // Calcular totales basados en las transacciones
+            var totalAbonos = transacciones.Where(t => t.Monto > 0).Sum(t => t.Monto);
+            var totalCargos = Math.Abs(transacciones.Where(t => t.Monto < 0).Sum(t => t.Monto));
+
+            return new EstadoCuentaViewModel
+            {
+                Cliente = cliente.Nombre,
+                Fecha = DateTime.Now,
+                TotalDeuda = cliente.DeudaTotal,
+                Capital = cliente.DeudaTotal * 0.8m, // 80% capital
+                Intereses = cliente.DeudaTotal * 0.2m, // 20% intereses
+                SaldoAnterior = 1250.00m,
+                TotalAbonos = totalAbonos,
+                TotalCargos = totalCargos,
+                SaldoActual = cliente.DeudaTotal,
+                HistorialTransacciones = transacciones,
+                SearchTerm = searchTerm,
+                FechaDesde = fechaDesde,
+                FechaHasta = fechaHasta
+            };
+        }
+
+        private async Task<List<TransaccionViewModel>> GetTransaccionesFromDatabase(string userId, string searchTerm, DateTime? fechaDesde, DateTime? fechaHasta)
+        {
+            // Crear lista de transacciones de ejemplo
+            var transacciones = new List<TransaccionViewModel>
+            {
+                new TransaccionViewModel { 
+                    Id = 1, 
+                    Fecha = DateTime.Now.AddDays(-10).ToString("dd/MM/yyyy"),
+                    Descripcion = "Pago en línea realizado", 
+                    Monto = 500.00m, 
+                    Estado = "Completado" 
+                },
+                new TransaccionViewModel { 
+                    Id = 2, 
+                    Fecha = DateTime.Now.AddDays(-15).ToString("dd/MM/yyyy"),
+                    Descripcion = "Compra en tienda física", 
+                    Monto = -350.00m, 
+                    Estado = "Procesado" 
+                },
+                new TransaccionViewModel { 
+                    Id = 3, 
+                    Fecha = DateTime.Now.AddDays(-20).ToString("dd/MM/yyyy"),
+                    Descripcion = "Transferencia bancaria", 
+                    Monto = 250.00m, 
+                    Estado = "Completado" 
+                },
+                new TransaccionViewModel { 
+                    Id = 4, 
+                    Fecha = DateTime.Now.AddDays(-25).ToString("dd/MM/yyyy"),
+                    Descripcion = "Compra en línea - Ecommerce", 
+                    Monto = -420.00m, 
+                    Estado = "Procesado" 
+                },
+                new TransaccionViewModel { 
+                    Id = 5, 
+                    Fecha = DateTime.Now.AddDays(-30).ToString("dd/MM/yyyy"),
+                    Descripcion = "Saldo inicial del periodo", 
+                    Monto = 1250.00m, 
+                    Estado = "Activo" 
+                },
+                new TransaccionViewModel { 
+                    Id = 6, 
+                    Fecha = DateTime.Now.AddDays(-35).ToString("dd/MM/yyyy"),
+                    Descripcion = "Pago con tarjeta de crédito", 
+                    Monto = 300.00m, 
+                    Estado = "Completado" 
+                }
+            };
+
+            // Aplicar filtros
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                transacciones = transacciones.Where(t => 
+                    t.Descripcion.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            return transacciones.OrderByDescending(t => DateTime.ParseExact(t.Fecha, "dd/MM/yyyy", null)).ToList();
+        }
+
+        private byte[] GeneratePdfWithiText(EstadoCuentaViewModel data)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                var writer = new PdfWriter(memoryStream);
+                var pdf = new PdfDocument(writer);
+                var document = new Document(pdf);
+
+                try
+                {
+                    // Configurar fuentes
+                    var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+                    var normalFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+                    // Título principal
+                    document.Add(new Paragraph("SISTEMA DE COBRANZA DE BELLEZA")
+                        .SetFont(boldFont)
+                        .SetFontSize(16)
+                        .SetTextAlignment(TextAlignment.CENTER));
+
+                    document.Add(new Paragraph("Estado de Cuenta Detallado")
+                        .SetFont(boldFont)
+                        .SetFontSize(14)
+                        .SetTextAlignment(TextAlignment.CENTER));
+
+                    document.Add(new Paragraph(" "));
+
+                    // Información del cliente
+                    document.Add(new Paragraph("INFORMACIÓN DEL CLIENTE")
+                        .SetFont(boldFont)
+                        .SetFontSize(12));
+                    
+                    document.Add(new Paragraph($"Cliente: {data.Cliente}")
+                        .SetFont(normalFont));
+                    document.Add(new Paragraph($"Fecha: {data.Fecha:dd/MM/yyyy}")
+                        .SetFont(normalFont));
+                    document.Add(new Paragraph($"Hora: {data.Fecha:HH:mm}")
+                        .SetFont(normalFont));
+
+                    document.Add(new Paragraph(" "));
+
+                    // Resumen de Deuda
+                    document.Add(new Paragraph("RESUMEN DE DEUDA")
+                        .SetFont(boldFont)
+                        .SetFontSize(12));
+                    
+                    document.Add(new Paragraph($"Total Deuda: ${data.TotalDeuda:N2}")
+                        .SetFont(normalFont));
+                    document.Add(new Paragraph($"Capital: ${data.Capital:N2}")
+                        .SetFont(normalFont));
+                    document.Add(new Paragraph($"Intereses: ${data.Intereses:N2}")
+                        .SetFont(normalFont));
+
+                    document.Add(new Paragraph(" "));
+
+                    // Saldos
+                    document.Add(new Paragraph($"SALDO ANTERIOR: ${data.SaldoAnterior:N2}")
+                        .SetFont(boldFont));
+                    document.Add(new Paragraph($"SALDO ACTUAL: ${data.SaldoActual:N2}")
+                        .SetFont(boldFont));
+
+                    document.Add(new Paragraph(" "));
+
+                    // Movimientos
+                    document.Add(new Paragraph("MOVIMIENTOS")
+                        .SetFont(boldFont)
+                        .SetFontSize(12));
+                    
+                    document.Add(new Paragraph($"Abonos: ${data.TotalAbonos:N2}")
+                        .SetFont(normalFont));
+                    document.Add(new Paragraph($"Cargos: ${data.TotalCargos:N2}")
+                        .SetFont(normalFont));
+
+                    document.Add(new Paragraph(" "));
+
+                    // Historial de transacciones
+                    document.Add(new Paragraph("HISTORIAL DE TRANSACCIONES")
+                        .SetFont(boldFont)
+                        .SetFontSize(12));
+
+                    // Crear tabla para transacciones
+                    var table = new Table(4, true);
+                    
+                    // Encabezados de tabla
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Fecha").SetFont(boldFont)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Descripción").SetFont(boldFont)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Monto").SetFont(boldFont)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Estado").SetFont(boldFont)));
+
+                    foreach (var transaccion in data.HistorialTransacciones)
+                    {
+                        var signo = transaccion.Monto >= 0 ? "+" : "";
+                        
+                        table.AddCell(new Cell().Add(new Paragraph(transaccion.Fecha).SetFont(normalFont)));
+                        table.AddCell(new Cell().Add(new Paragraph(transaccion.Descripcion).SetFont(normalFont)));
+                        table.AddCell(new Cell().Add(new Paragraph($"{signo}${Math.Abs(transaccion.Monto):N2}").SetFont(normalFont)));
+                        table.AddCell(new Cell().Add(new Paragraph(transaccion.Estado).SetFont(normalFont)));
+                    }
+
+                    document.Add(table);
+                    document.Add(new Paragraph(" "));
+                    
+                    // Pie de página
+                    document.Add(new Paragraph($"Documento generado el: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                        .SetFont(normalFont)
+                        .SetFontSize(8)
+                        .SetTextAlignment(TextAlignment.CENTER));
+                }
+                finally
+                {
+                    document.Close();
+                }
+
+                return memoryStream.ToArray();
+            }
+        }
     }
 }

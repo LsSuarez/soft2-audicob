@@ -1,0 +1,100 @@
+@model List<Audicob.Models.Cliente>
+
+@{
+    ViewData["Title"] = "Gestión de Clientes";
+}
+
+<h2>Gestión de Clientes</h2>
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <form method="get" class="d-flex align-items-center g-2">
+            <select name="tipoBusqueda" class="form-select me-2" style="width:160px;">
+                <option value="id">ID</option>
+                <option value="documento">Documento</option>
+                <option value="nombre">Nombre</option>
+            </select>
+
+            <input type="text" name="criterio" placeholder="Buscar..." class="form-control me-2" style="max-width:300px;" />
+
+            <button class="btn btn-primary me-2">Buscar</button>
+            <a href="@Url.Action("Index","ClienteEdicion")" class="btn btn-secondary">Mostrar Todos</a>
+        </form>
+    </div>
+
+    <div class="col-md-4">
+        <!-- DESPLEGABLE: seleccionar cliente -->
+        <label class="form-label">Seleccionar Cliente:</label>
+        <select id="selectCliente" class="form-select">
+            <option value="">-- Seleccione --</option>
+            @foreach (var c in Model)
+            {
+                <option value="@c.Id">@c.Id - @c.Documento - @c.Nombre</option>
+            }
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Editar</th>
+                    <th>ID</th>
+                    <th>Documento</th>
+                    <th>Nombre</th>
+                    <th>Ingresos</th>
+                    <th>Deuda</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    <tr data-id="@c.Id" style="cursor:pointer">
+                        <td>
+                            <a href="@Url.Action("Editar","ClienteEdicion", new { id = c.Id })" class="btn btn-sm btn-warning">✏️</a>
+                        </td>
+                        <td>@c.Id</td>
+                        <td>@c.Documento</td>
+                        <td>@c.Nombre</td>
+                        <td>@c.IngresosMensuales</td>
+                        <td>@c.DeudaTotal</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="col-md-4">
+        <div id="detalleCliente" class="p-3 border rounded bg-light">
+            <strong>Seleccione un cliente (desde el desplegable o la tabla)</strong>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- jQuery (necesario para .load); agrega en layout si ya lo tienes global) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        // Cuando se cambie el select -> cargar detalle
+        $("#selectCliente").on("change", function () {
+            var id = $(this).val();
+            if (id) {
+                $("#detalleCliente").load("/ClienteEdicion/Detalle/" + id);
+            } else {
+                $("#detalleCliente").html("<strong>Seleccione un cliente (desde el desplegable o la tabla)</strong>");
+            }
+        });
+
+        // Cuando se hace click en una fila, seleccionar en el select y cargar detalle
+        $("table.table tbody tr").on("click", function () {
+            var id = $(this).data("id");
+            if (id) {
+                $("#selectCliente").val(id);
+                $("#detalleCliente").load("/ClienteEdicion/Detalle/" + id);
+            }
+        });
+    </script>
+}

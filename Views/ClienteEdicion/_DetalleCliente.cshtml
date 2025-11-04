@@ -1,0 +1,12 @@
+@model Audicob.Models.Cliente
+
+<div>
+    <h5>@Model.Nombre</h5>
+    <p><strong>ID:</strong> @Model.Id</p>
+    <p><strong>Documento:</strong> @Model.Documento</p>
+    <p><strong>Ingresos Mensuales:</strong> @Model.IngresosMensuales</p>
+    <p><strong>Deuda Total:</strong> @Model.DeudaTotal</p>
+    <p><em>Última actualización: @Model.FechaActualizacion.ToLocalTime()</em></p>
+
+    <a class="btn btn-primary mt-2" href="@Url.Action("Editar","ClienteEdicion", new { id = Model.Id })">Editar</a>
+</div>

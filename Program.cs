@@ -11,7 +11,7 @@ namespace Audicob
     {
         public static async Task Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args); // Aquí comienza la creación del builder
+            var builder = WebApplication.CreateBuilder(args);
 
             // 🔐 Configuración de conexión a PostgreSQL
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -27,31 +27,33 @@ namespace Audicob
             // 🔐 Configuración de Identity con roles y confirmación de cuenta
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
-                options.SignIn.RequireConfirmedAccount = false; // Permitir login sin necesidad de confirmar la cuenta
+                options.SignIn.RequireConfirmedAccount = false;
                 options.Password.RequireDigit = true;
                 options.Password.RequireUppercase = true;
-                options.Password.RequiredLength = 6; // Longitud mínima de contraseña
+                options.Password.RequiredLength = 6;
                 options.User.RequireUniqueEmail = true;
             })
-            .AddEntityFrameworkStores<ApplicationDbContext>() // Configura Entity Framework como proveedor de almacenamiento
-            .AddDefaultTokenProviders(); // Añadir soporte de generación de tokens
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
             // 🌐 MVC + Razor Pages con configuración JSON para API
             builder.Services.AddControllersWithViews()
                 .AddJsonOptions(options =>
                 {
-                    // Configuración para serializar JSON con camelCase
                     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
                     options.JsonSerializerOptions.WriteIndented = true;
-                    // Manejar referencias circulares
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
                 });
 
-            builder.Services.AddRazorPages(); // Configuración de Razor Pages
+            builder.Services.AddRazorPages();
 
             // 📬 SERVICIOS DE NOTIFICACIONES
             builder.Services.AddScoped<INotificacionService, NotificacionService>();
             builder.Services.AddScoped<IPdfService, PdfService>();
+            
+            // 📊 SERVICIO DE MÉTRICAS DE DESEMPEÑO (AGREGADO)
+            builder.Services.AddScoped<IMetricasService, MetricasService>();
+            
             builder.Services.AddHostedService<RecordatorioHostedService>();
 
             // 🔧 Configuración del middleware de la aplicación
@@ -60,27 +62,24 @@ namespace Audicob
             // 🌍 Configuración del pipeline HTTP para desarrollo y producción
             if (app.Environment.IsDevelopment())
             {
-                app.UseMigrationsEndPoint(); // Si el entorno es de desarrollo, habilita las migraciones en el pipeline
+                app.UseMigrationsEndPoint();
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error"); // Para manejo de excepciones en producción
-                app.UseHsts(); // Seguridad adicional para producción (HTTP Strict Transport Security)
+                app.UseExceptionHandler("/Home/Error");
+                app.UseHsts();
             }
 
-            app.UseHttpsRedirection(); // Redirige las peticiones HTTP a HTTPS
-            app.UseStaticFiles(); // Habilita el manejo de archivos estáticos (CSS, JS, imágenes)
-
-            app.UseRouting(); // Habilita el enrutamiento de las rutas
-
-            // 🔐 Activar autenticación y autorización
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+            app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
 
             // 🧭 Definir rutas principales y personalizadas
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}"); // Ruta por defecto
+                pattern: "{controller=Home}/{action=Index}/{id?}");
 
             // Ruta personalizada para la vista de "Cobranza/Cliente"
             app.MapControllerRoute(
@@ -89,14 +88,14 @@ namespace Audicob
                 defaults: new { controller = "Cobranza", action = "Cliente" }
             );
 
-            // ✅ NUEVA RUTA: Para el dashboard de validación
+            // Ruta para el dashboard de validación
             app.MapControllerRoute(
                 name: "validation",
                 pattern: "Validation/{action=Index}/{id?}",
                 defaults: new { controller = "Validation" }
             );
 
-            app.MapRazorPages(); // Habilita las páginas Razor
+            app.MapRazorPages();
 
             // 🌱 Seed de roles y usuarios iniciales
             using (var scope = app.Services.CreateScope())
@@ -120,7 +119,7 @@ namespace Audicob
                 }
             }
 
-            app.Run(); // Ejecuta la aplicación web
+            app.Run();
         }
     }
 }

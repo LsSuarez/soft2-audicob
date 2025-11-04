@@ -1,0 +1,151 @@
+@{
+    ViewData["Title"] = "Panel de Métricas de Desempeño";
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <label for="fechaInicio" class="form-label">Fecha Inicio</label>
+                <input type="date" class="form-control" id="fechaInicio" name="fechaInicio" value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-3">
+                <label for="fechaFin" class="form-label">Fecha Fin</label>
+                <input type="date" class="form-control" id="fechaFin" name="fechaFin" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" id="btnGenerar" class="btn btn-primary w-100">
+                    Generar Métricas
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Botones de descarga -->
+<div class="download-buttons text-center mt-3">
+    <button type="button" id="btnDescargarPDF" class="btn btn-danger mx-2">
+        Descargar PDF
+    </button>
+    <button type="button" id="btnDescargarExcel" class="btn btn-success mx-2">
+        Descargar Excel
+    </button>
+</div>
+
+<!-- Panel de Métricas -->
+<div id="panelMetricas">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando métricas...</span>
+        </div>
+        <p class="mt-2">Seleccione un período y haga clic en "Generar Métricas"</p>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Generar métricas
+        $('#btnGenerar').on('click', function() {
+            cargarMetricas();
+        });
+
+        // Descargar PDF
+        $('#btnDescargarPDF').on('click', function() {
+            descargarReporte('pdf');
+        });
+
+        // Descargar Excel
+        $('#btnDescargarExcel').on('click', function() {
+            descargarReporte('excel');
+        });
+
+        // Cargar métricas al iniciar si hay fechas
+        if ($('#fechaInicio').val() && $('#fechaFin').val()) {
+            cargarMetricas();
+        }
+    });
+
+    function cargarMetricas() {
+        var fechaInicio = $('#fechaInicio').val();
+        var fechaFin = $('#fechaFin').val();
+
+        if (!fechaInicio || !fechaFin) {
+            alert('Por favor seleccione ambas fechas');
+            return;
+        }
+
+        $('#panelMetricas').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando métricas...</span>
+                </div>
+                <p class="mt-2">Generando métricas...</p>
+            </div>
+        `);
+
+        $.post('@Url.Action("GenerarMetricas", "Supervisor")', {
+            fechaInicio: fechaInicio,
+            fechaFin: fechaFin
+        })
+        .done(function(data) {
+            $('#panelMetricas').html(data);
+        })
+        .fail(function(xhr) {
+            $('#panelMetricas').html(
+                '<div class="alert alert-danger">Error al cargar las métricas: ' + xhr.responseText + '</div>'
+            );
+        });
+    }
+
+    function descargarReporte(formato) {
+        var fechaInicio = $('#fechaInicio').val();
+        var fechaFin = $('#fechaFin').val();
+
+        if (!fechaInicio || !fechaFin) {
+            alert('Por favor seleccione ambas fechas antes de descargar');
+            return;
+        }
+
+        var url = '@Url.Action("DescargarReporteMetricas", "Supervisor")' + 
+                 '?formato=' + formato + 
+                 '&fechaInicio=' + fechaInicio + 
+                 '&fechaFin=' + fechaFin;
+
+        window.location.href = url;
+    }
+</script>
+
+<style>
+    /* Estilos de los botones de descarga */
+    .download-buttons {
+        margin-top: 20px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-weight: 600;
+        border-radius: 5px;
+    }
+
+    .btn-danger {
+        background-color: #e74c3c;
+        border-color: #e74c3c;
+    }
+
+    .btn-success {
+        background-color: #27ae60;
+        border-color: #27ae60;
+    }
+
+    /* Estilos para la carga de métricas */
+    #panelMetricas {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+    }
+
+    .spinner-border {
+        margin-right: 10px;
+    }
+</style>

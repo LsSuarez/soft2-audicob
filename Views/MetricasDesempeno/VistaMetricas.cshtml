@@ -1,0 +1,249 @@
+@{
+    ViewData["Title"] = "Vista de Métricas";
+}
+
+<div class="container">
+    <header>
+        <h1>@ViewData["Title"]</h1>
+        <p class="subtitle">Vista detallada de las métricas generadas</p>
+    </header>
+
+    <!-- Panel de Métricas -->
+    <div id="panelMetricas" class="mt-4">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">Total Clientes</div>
+                    <div class="metric-value">{{ totalClientes }}</div>
+                    <div class="metric-change positive">
+                        <span>+5% vs mes anterior</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">Monto Recuperado</div>
+                    <div class="metric-value">{{ montoRecuperado }}</div>
+                    <div class="metric-change positive">
+                        <span>+12% vs mes anterior</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">Eficiencia General</div>
+                    <div class="metric-value">{{ eficienciaGeneral }}</div>
+                    <div class="metric-change negative">
+                        <span>-8% vs mes anterior</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">Deuda Total</div>
+                    <div class="metric-value">{{ deudaTotal }}</div>
+                    <div class="metric-change negative">
+                        <span>-8% vs mes anterior</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Rendimiento por Asesor -->
+        <div class="chart-card mt-5">
+            <h3 class="chart-title">Rendimiento por Asesor</h3>
+            <div class="bar-chart">
+                <!-- Asegúrate de renderizar dinámicamente estos valores según los datos -->
+                <div class="bar-container">
+                    <div class="bar" style="height: 80%;"></div>
+                    <div class="bar-label">María</div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar" style="height: 60%;"></div>
+                    <div class="bar-label">Carlos</div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar" style="height: 50%;"></div>
+                    <div class="bar-label">Ana</div>
+                </div>
+                <div class="bar-container">
+                    <div class="bar" style="height: 30%;"></div>
+                    <div class="bar-label">Pedro</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Distribución de Estados -->
+        <div class="chart-card mt-5">
+            <h3 class="chart-title">Distribución de Estados</h3>
+            <div class="pie-chart">
+                <!-- Gráfico pie container (es necesario integrar con un servicio gráfico como Chart.js) -->
+                <div class="pie-container"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #e74c3c;"></div>
+                        <div class="legend-text">Vencidos</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #2ecc71;"></div>
+                        <div class="legend-text">Al Día</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #3498db;"></div>
+                        <div class="legend-text">En Gestión</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #f39c12;"></div>
+                        <div class="legend-text">Morosos</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #9b59b6;"></div>
+                        <div class="legend-text">Judicial</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de descarga -->
+    <div class="download-buttons text-center mt-5">
+        <button type="button" id="btnDescargarPDF" class="btn btn-danger mx-2">
+            Descargar PDF
+        </button>
+        <button type="button" id="btnDescargarExcel" class="btn btn-success mx-2">
+            Descargar Excel
+        </button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        // Funcionalidad para descargar PDF
+        $('#btnDescargarPDF').on('click', function() {
+            var url = '@Url.Action("DescargarReporteMetricas", "Supervisor")' + '?formato=pdf';
+            window.location.href = url;
+        });
+
+        // Funcionalidad para descargar Excel
+        $('#btnDescargarExcel').on('click', function() {
+            var url = '@Url.Action("DescargarReporteMetricas", "Supervisor")' + '?formato=excel';
+            window.location.href = url;
+        });
+    });
+</script>
+
+<style>
+    /* Estilos de los gráficos */
+    .chart-card {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+
+    /* Estilos para los gráficos de barras */
+    .bar-chart {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .bar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .bar {
+        width: 50px;
+        background: linear-gradient(to top, var(--secondary-color), #2980b9);
+        border-radius: 4px 4px 0 0;
+        transition: all 0.5s ease;
+    }
+
+    .bar-label {
+        margin-top: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    /* Estilos del gráfico circular */
+    .pie-chart {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        align-items: center;
+    }
+
+    .pie-container {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: conic-gradient(
+            #e74c3c 0% 31%,
+            #2ecc71 31% 55%,
+            #3498db 55% 70%,
+            #f39c12 70% 85%,
+            #9b59b6 85% 100%
+        );
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .legend {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 200px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        padding: 5px;
+        border-radius: 4px;
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 12px;
+    }
+
+    .legend-text {
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .download-buttons {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+
+    .btn-danger {
+        background-color: #e74c3c;
+        border-color: #e74c3c;
+    }
+
+    .btn-success {
+        background-color: #27ae60;
+        border-color: #27ae60;
+    }
+</style>

@@ -1,0 +1,605 @@
+@{
+    ViewData["Title"] = "Vista Métricas de Desempeño";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--primary-color);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        /* Botones de descarga */
+        .download-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .download-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .download-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-download {
+            padding: 12px 25px;
+            font-weight: 600;
+            border-radius: 6px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 160px;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-pdf:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+        }
+
+        .btn-excel {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .btn-excel:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--box-shadow);
+            transition: all 0.3s ease;
+            border-top: 5px solid var(--secondary-color);
+            text-align: center;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .metric-card:nth-child(1) { border-top-color: #3498db; }
+        .metric-card:nth-child(2) { border-top-color: #2ecc71; }
+        .metric-card:nth-child(3) { border-top-color: #f39c12; }
+        .metric-card:nth-child(4) { border-top-color: #e74c3c; }
+        
+        .metric-title {
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-value {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+        }
+        
+        .metric-change {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .positive {
+            color: var(--success-color);
+            background-color: rgba(46, 204, 113, 0.1);
+        }
+        
+        .negative {
+            color: var(--danger-color);
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--box-shadow);
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .chart-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-title::before {
+            content: "📊";
+            font-size: 18px;
+        }
+        
+        .chart-subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 20px;
+            font-weight: 400;
+        }
+        
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 220px;
+            gap: 30px;
+            padding: 25px 0;
+            justify-content: center;
+            background: linear-gradient(to top, #f8f9fa, transparent);
+            border-radius: 8px;
+        }
+        
+        .bar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            max-width: 90px;
+        }
+        
+        .bar {
+            width: 60px;
+            background: linear-gradient(to top, var(--secondary-color), #2980b9);
+            border-radius: 6px 6px 0 0;
+            transition: all 0.5s ease;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .bar-value {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary-color);
+            background: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .bar-label {
+            margin-top: 15px;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            color: var(--dark-color);
+        }
+        
+        .pie-chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 35px;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        
+        .pie-container {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #e74c3c 0% 31%,
+                #2ecc71 31% 55%,
+                #3498db 55% 70%,
+                #f39c12 70% 85%,
+                #9b59b6 85% 100%
+            );
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            position: relative;
+        }
+        
+        .pie-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .legend {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 220px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .legend-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+        }
+        
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 15px;
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .legend-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        .legend-percentage {
+            font-weight: 700;
+            margin-left: 5px;
+        }
+
+        / Estilos para móviles sin /
+        .mobile-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .mobile-pie-chart {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .mobile-bar-chart {
+            gap: 20px;
+        }
+        
+        .mobile-bar {
+            width: 45px;
+        }
+
+        .mobile-download-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .mobile-download-button {
+            width: 100%;
+            max-width: 250px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 14px;
+            border-top: 1px solid #ecf0f1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Panel de Control de Cobranza</h1>
+            <p class="subtitle">Métricas y Análisis de Desempeño</p>
+        </header>
+
+        <!-- Sección de Descargas -->
+        <div class="download-section">
+            <h3 class="download-title">📥 Descargar Reportes</h3>
+            <div class="download-buttons" id="downloadButtons">
+                <button type="button" id="btnDescargarPDF" class="btn-download btn-pdf">
+                    📄 Descargar PDF
+                </button>
+                <button type="button" id="btnDescargarExcel" class="btn-download btn-excel">
+                    📊 Descargar Excel
+                </button>
+            </div>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Total Clientes</div>
+                <div class="metric-value">103</div>
+                <div class="metric-change positive">+5% vs mes anterior</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Monto Recuperado</div>
+                <div class="metric-value">S/ 63,050.5</div>
+                <div class="metric-change positive">+12% vs mes anterior</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Eficiencia General</div>
+                <div class="metric-value">73.2%</div>
+                <div class="metric-change positive">+3.2% vs meta</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-title">Deuda Total</div>
+                <div class="metric-value">S/ 125,600.75</div>
+                <div class="metric-change negative">-8% vs mes anterior</div>
+            </div>
+        </div>
+        
+        <div class="charts-container" id="chartsContainer">
+            <div class="chart-card">
+                <h2 class="chart-title">Rendimiento por Asesor</h2>
+                <p class="chart-subtitle">Cobros exitosos y monto recuperado por ejecutivo</p>
+                <div class="bar-chart" id="barChart">
+                    <div class="bar-container">
+                        <div class="bar" style="height: 180px;">
+                            <div class="bar-value">24</div>
+                        </div>
+                        <div class="bar-label">María<br>González</div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 140px;">
+                            <div class="bar-value">18</div>
+                        </div>
+                        <div class="bar-label">Carlos<br>Rodríguez</div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 100px;">
+                            <div class="bar-value">12</div>
+                        </div>
+                        <div class="bar-label">Ana<br>Martínez</div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar" style="height: 60px;">
+                            <div class="bar-value">6</div>
+                        </div>
+                        <div class="bar-label">Pedro<br>López</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <h2 class="chart-title">Distribución de Estados</h2>
+                <p class="chart-subtitle">Estado actual de la cartera de clientes</p>
+                <div class="pie-chart-container" id="pieChart">
+                    <div class="pie-container">
+                        <div class="pie-center"></div>
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #e74c3c;"></div>
+                            <div class="legend-text">Vencidos <span class="legend-percentage">31%</span></div>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #2ecc71;"></div>
+                            <div class="legend-text">Al Día <span class="legend-percentage">24%</span></div>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #3498db;"></div>
+                            <div class="legend-text">En Gestión <span class="legend-percentage">15%</span></div>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #f39c12;"></div>
+                            <div class="legend-text">Morosos <span class="legend-percentage">27%</span></div>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #9b59b6;"></div>
+                            <div class="legend-text">Judicial <span class="legend-percentage">3%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Última actualización: @DateTime.Now.ToString("dd/MM/yyyy HH:mm") | Sistema de Gestión de Cobranza</p>
+        </div>
+    </div>
+    
+    <script>
+        // Función para manejar la responsividad
+        function handleResponsiveLayout() {
+            const chartsContainer = document.getElementById('chartsContainer');
+            const barChart = document.getElementById('barChart');
+            const pieChart = document.getElementById('pieChart');
+            const bars = document.querySelectorAll('.bar');
+            const downloadButtons = document.getElementById('downloadButtons');
+            const buttons = document.querySelectorAll('.btn-download');
+            
+            const screenWidth = window.innerWidth;
+            
+            if (screenWidth <= 768) {
+                chartsContainer.classList.add('mobile-layout');
+                pieChart.classList.add('mobile-pie-chart');
+                barChart.classList.add('mobile-bar-chart');
+                downloadButtons.classList.add('mobile-download-buttons');
+                
+                bars.forEach(bar => {
+                    bar.classList.add('mobile-bar');
+                });
+                
+                buttons.forEach(button => {
+                    button.classList.add('mobile-download-button');
+                });
+            } else {
+                chartsContainer.classList.remove('mobile-layout');
+                pieChart.classList.remove('mobile-pie-chart');
+                barChart.classList.remove('mobile-bar-chart');
+                downloadButtons.classList.remove('mobile-download-buttons');
+                
+                bars.forEach(bar => {
+                    bar.classList.remove('mobile-bar');
+                });
+                
+                buttons.forEach(button => {
+                    button.classList.remove('mobile-download-button');
+                });
+            }
+        }
+
+        // Funciones para descargar reportes
+        function descargarPDF() {
+            alert('📄 Iniciando descarga del reporte en PDF...');
+            // Aquí puedes agregar la lógica para descargar el PDF
+            // Por ejemplo: window.location.href = '/Supervisor/DescargarReporte?formato=pdf';
+        }
+
+        function descargarExcel() {
+            alert('📊 Iniciando descarga del reporte en Excel...');
+            // Aquí puedes agregar la lógica para descargar el Excel
+            // Por ejemplo: window.location.href = '/Supervisor/DescargarReporte?formato=excel';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animación de las barras al cargar la página
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach(bar => {
+                const originalHeight = bar.style.height;
+                bar.style.height = '0';
+                setTimeout(() => {
+                    bar.style.height = originalHeight;
+                }, 500);
+            });
+            
+            // Configurar responsividad
+            handleResponsiveLayout();
+            window.addEventListener('resize', handleResponsiveLayout);
+            
+            // Efectos hover para las tarjetas de métricas
+            const metricCards = document.querySelectorAll('.metric-card');
+            metricCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Event listeners para los botones de descarga
+            document.getElementById('btnDescargarPDF').addEventListener('click', descargarPDF);
+            document.getElementById('btnDescargarExcel').addEventListener('click', descargarExcel);
+
+            // Efectos hover para botones de descarga
+            const downloadButtons = document.querySelectorAll('.btn-download');
+            downloadButtons.forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.05)';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

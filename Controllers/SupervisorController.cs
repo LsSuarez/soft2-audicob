@@ -137,7 +137,7 @@ namespace Audicob.Controllers
             var pago = await _db.Pagos
                 .Include(p => p.Cliente)
                 .FirstOrDefaultAsync(p => p.Id == pagoId);
-                
+
             if (pago == null)
             {
                 TempData["Error"] = "Pago no encontrado.";
@@ -154,7 +154,7 @@ namespace Audicob.Controllers
 
             pago.Validado = true;
             pago.Estado = "Cancelado";
-            
+
             var fechaValidacion = DateTime.UtcNow;
             pago.Observacion = $"Validado por {user.FullName} el {fechaValidacion:dd/MM/yyyy HH:mm:ss}";
 
@@ -200,7 +200,7 @@ namespace Audicob.Controllers
             }
 
             if (monto < 180)
-            { 
+            {
                 TempData["Error"] = "Debe ingresar un monto mayor a 180.";
                 return RedirectToAction("AsignarLineaCredito");
             }
@@ -504,8 +504,8 @@ namespace Audicob.Controllers
                     .OrderByDescending(ce => ce.FechaModificacion)
                     .FirstOrDefaultAsync();
 
-                return Json(new { 
-                    success = true, 
+                return Json(new {
+                    success = true,
                     estadoActual = estadoActual?.Estado ?? "Vigente",
                     message = "Cambios descartados correctamente"
                 });
@@ -518,107 +518,107 @@ namespace Audicob.Controllers
 
         // HU: Modificar Estado de Cartera - Vistas existentes (mantenidas para compatibilidad)
         // GET: Supervisor/DetalleCartera/5
-public async Task<IActionResult> DetalleCartera(int id)
-{
-    var cliente = await _db.Clientes
-        .FirstOrDefaultAsync(c => c.Id == id);
-
-    if (cliente == null)
-    {
-        TempData["Error"] = "Cliente no encontrado.";
-        return RedirectToAction("Dashboard");
-    }
-
-    // Buscar estado de cartera existente o crear uno nuevo
-    var carteraEstado = await _db.CarteraEstados
-        .FirstOrDefaultAsync(c => c.ClienteId == id);
-
-    if (carteraEstado == null)
-    {
-        // Crear estado por defecto si no existe - USAR DateTime.UtcNow para PostgreSQL
-        carteraEstado = new CarteraEstado 
-        { 
-            ClienteId = id, 
-            Estado = "Vigente",
-            FechaModificacion = DateTime.UtcNow, // CAMBIADO: DateTime.Now -> DateTime.UtcNow
-            UsuarioModificacion = User.Identity?.Name ?? "Sistema"
-        };
-        _db.CarteraEstados.Add(carteraEstado);
-        await _db.SaveChangesAsync();
-    }
-
-    var model = new Audicob.Models.CarteraEstadoUpdateDto
-    {
-        Id = carteraEstado.Id,
-        ClienteId = cliente.Id,
-        ClienteNombre = cliente.Nombre,
-        Estado = carteraEstado.Estado,
-        EstadoActual = carteraEstado.Estado,
-        Comentario = carteraEstado.Comentario
-    };
-
-    ViewBag.FechaModificacion = carteraEstado.FechaModificacion;
-    return View(model);
-}
-
-// POST: Supervisor/ActualizarEstadoCartera (versión original mantenida)
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraEstadoUpdateDto model)
-{
-    if (ModelState.IsValid)
-    {
-        try
+        public async Task<IActionResult> DetalleCartera(int id)
         {
-            var carteraEstado = await _db.CarteraEstados
-                .FirstOrDefaultAsync(c => c.ClienteId == model.ClienteId);
+            var cliente = await _db.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-            var user = await _userManager.GetUserAsync(User);
-            var userName = user?.FullName ?? User.Identity?.Name ?? "Sistema";
-
-            if (carteraEstado != null)
+            if (cliente == null)
             {
-                // Actualizar el estado de cartera
-                carteraEstado.Estado = model.Estado;
-                carteraEstado.Comentario = model.Comentario;
-                carteraEstado.FechaModificacion = DateTime.UtcNow;
-                carteraEstado.UsuarioModificacion = userName;
-
-                _db.CarteraEstados.Update(carteraEstado);
+                TempData["Error"] = "Cliente no encontrado.";
+                return RedirectToAction("Dashboard");
             }
 
-            await _db.SaveChangesAsync();
+            // Buscar estado de cartera existente o crear uno nuevo
+            var carteraEstado = await _db.CarteraEstados
+                .FirstOrDefaultAsync(c => c.ClienteId == id);
 
-            // Preparar la respuesta de éxito
-            var cliente = await _db.Clientes.FindAsync(model.ClienteId);
-            ViewBag.OperacionExitosa = true;
-            ViewBag.ClienteNombre = cliente?.Nombre ?? "Cliente";
-            ViewBag.FechaModificacion = DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm");
+            if (carteraEstado == null)
+            {
+                // Crear estado por defecto si no existe - USAR DateTime.UtcNow para PostgreSQL
+                carteraEstado = new CarteraEstado
+                {
+                    ClienteId = id,
+                    Estado = "Vigente",
+                    FechaModificacion = DateTime.UtcNow, // CAMBIADO: DateTime.Now -> DateTime.UtcNow
+                    UsuarioModificacion = User.Identity?.Name ?? "Sistema"
+                };
+                _db.CarteraEstados.Add(carteraEstado);
+                await _db.SaveChangesAsync();
+            }
 
-            TempData["Success"] = "Estado de cartera actualizado exitosamente.";
+            var model = new Audicob.Models.CarteraEstadoUpdateDto
+            {
+                Id = carteraEstado.Id,
+                ClienteId = cliente.Id,
+                ClienteNombre = cliente.Nombre,
+                Estado = carteraEstado.Estado,
+                EstadoActual = carteraEstado.Estado,
+                Comentario = carteraEstado.Comentario
+            };
 
-            // Actualizar el modelo para la vista
-            model.EstadoActual = model.Estado;
+            ViewBag.FechaModificacion = carteraEstado.FechaModificacion;
+            return View(model);
+        }
+
+        // POST: Supervisor/ActualizarEstadoCartera (versión original mantenida)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraEstadoUpdateDto model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var carteraEstado = await _db.CarteraEstados
+                        .FirstOrDefaultAsync(c => c.ClienteId == model.ClienteId);
+
+                    var user = await _userManager.GetUserAsync(User);
+                    var userName = user?.FullName ?? User.Identity?.Name ?? "Sistema";
+
+                    if (carteraEstado != null)
+                    {
+                        // Actualizar el estado de cartera
+                        carteraEstado.Estado = model.Estado;
+                        carteraEstado.Comentario = model.Comentario;
+                        carteraEstado.FechaModificacion = DateTime.UtcNow;
+                        carteraEstado.UsuarioModificacion = userName;
+
+                        _db.CarteraEstados.Update(carteraEstado);
+                    }
+
+                    await _db.SaveChangesAsync();
+
+                    // Preparar la respuesta de éxito
+                    var cliente = await _db.Clientes.FindAsync(model.ClienteId);
+                    ViewBag.OperacionExitosa = true;
+                    ViewBag.ClienteNombre = cliente?.Nombre ?? "Cliente";
+                    ViewBag.FechaModificacion = DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm");
+
+                    TempData["Success"] = "Estado de cartera actualizado exitosamente.";
+
+                    // Actualizar el modelo para la vista
+                    model.EstadoActual = model.Estado;
+                    return View("DetalleCartera", model);
+                }
+                catch (Exception ex)
+                {
+                    TempData["Error"] = $"Error al actualizar el estado: {ex.Message}";
+                    ModelState.AddModelError("", "Error al guardar los cambios.");
+                }
+            }
+
+            // Si hay errores, recargar los datos del cliente
+            var clienteReload = await _db.Clientes.FindAsync(model.ClienteId);
+            if (clienteReload != null)
+            {
+                model.ClienteNombre = clienteReload.Nombre;
+                model.EstadoActual = (await _db.CarteraEstados
+                    .FirstOrDefaultAsync(c => c.ClienteId == model.ClienteId))?.Estado ?? "Vigente";
+            }
+
             return View("DetalleCartera", model);
         }
-        catch (Exception ex)
-        {
-            TempData["Error"] = $"Error al actualizar el estado: {ex.Message}";
-            ModelState.AddModelError("", "Error al guardar los cambios.");
-        }
-    }
-
-    // Si hay errores, recargar los datos del cliente
-    var clienteReload = await _db.Clientes.FindAsync(model.ClienteId);
-    if (clienteReload != null)
-    {
-        model.ClienteNombre = clienteReload.Nombre;
-        model.EstadoActual = (await _db.CarteraEstados
-            .FirstOrDefaultAsync(c => c.ClienteId == model.ClienteId))?.Estado ?? "Vigente";
-    }
-
-    return View("DetalleCartera", model);
-}
         // GET: Supervisor/DescartarCambios/5 (versión original mantenida)
         public async Task<IActionResult> DescartarCambios(int id)
         {
@@ -779,7 +779,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
         public async Task<IActionResult> FiltrarMora()
         {
             var vm = new FiltroMoraViewModel();
-            
+
             // Cargar filtros guardados del usuario actual
             var user = await _userManager.GetUserAsync(User);
             if (user != null)
@@ -801,12 +801,12 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
         public async Task<IActionResult> FiltrarMora(FiltroMoraViewModel modelo, string? exportar)
         {
             var startTime = DateTime.Now;
-            
+
             try
             {
                 // CORRECCIÓN: Actualizar registros con EstadoAdmin NULL
                 await CorregirEstadoAdminNull();
-                
+
                 // Si es una exportación, redirigir al método correspondiente
                 if (!string.IsNullOrEmpty(exportar))
                 {
@@ -852,7 +852,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
 
                 // Ejecutar consulta y mapear resultados
                 var clientes = await query.ToListAsync();
-                
+
                 modelo.ResultadosFiltrados = clientes.Select(c => {
                     var diasEnMora = (DateTime.UtcNow - c.FechaActualizacion).Days;
                     var clienteInfo = new ClienteMoraInfo
@@ -867,7 +867,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
                         MontoEnMora = c.DeudaTotal,
                         TipoCliente = "Estándar" // Por defecto, podrías calcularlo según tus reglas de negocio
                     };
-                    
+
                     clienteInfo.CalcularPrioridad();
                     return clienteInfo;
                 }).OrderByDescending(c => c.DiasEnMora).ThenByDescending(c => c.MontoEnMora).ToList();
@@ -882,7 +882,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
                     await GuardarFiltro(modelo);
                     TempData["Success"] = $"Filtro '{modelo.NombreFiltroGuardado}' guardado correctamente.";
                 }
-                
+
                 // Recargar filtros guardados
                 var user = await _userManager.GetUserAsync(User);
                 if (user != null)
@@ -894,7 +894,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
                 }
 
                 TempData["Success"] = $"Filtrado completado: {modelo.TotalRegistros} clientes encontrados en {modelo.TiempoRespuesta.TotalMilliseconds:F0}ms";
-                
+
                 return View(modelo);
             }
             catch (Exception ex)
@@ -903,10 +903,148 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
                 return View(modelo);
             }
         }
+        // GET: /Supervisor/MetricasDesempeno
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        // GET: /Supervisor/MetricasDesempeno/MetricasDesempeno
+        public IActionResult MetricasDesempeno()
+        {
+            return View();
+        }
+
+        // GET: /Supervisor/MetricasDesempeno/VistaMetricas
+        public IActionResult VistaMetricas()
+        {
+            return View();
+        }
+
+        // GET: /Supervisor/MetricasDesempeno/PanelMetricas
+        public IActionResult PanelMetricas()
+        {
+            return View();
+        }
+    
 
         /// <summary>
         /// Carga un filtro guardado
         /// </summary>
+        /// 
+        public async Task<IActionResult> DescargarReportePDF()
+        {
+            try
+            {
+                // Obtén los datos para el reporte desde la base de datos
+                var clientes = await _db.Clientes.ToListAsync();
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    // Crear documento PDF
+                    Document doc = new Document(PageSize.A4);
+                    PdfWriter.GetInstance(doc, memoryStream);
+                    doc.Open();
+
+                    // Agregar título al reporte
+                    Paragraph title = new Paragraph("Reporte de Morosidad\n\n")
+                    {
+                        Alignment = Element.ALIGN_CENTER
+                    };
+                    doc.Add(title);
+
+                    // Agregar datos del reporte (estadísticas generales)
+                    string statsText = $"Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm}\n" +
+                                       $"Total de clientes: {clientes.Count}\n" +
+                                       $"Clientes al día: {clientes.Count(c => c.EstadoMora == "Al día")}\n" +
+                                       $"Clientes en mora: {clientes.Count(c => c.EstadoMora != "Al día")}\n" +
+                                       $"Monto total deuda: S/ {clientes.Sum(c => c.DeudaTotal):N2}\n\n";
+
+                    Paragraph stats = new Paragraph(statsText);
+                    doc.Add(stats);
+
+                    // Agregar tabla con los clientes
+                    PdfPTable table = new PdfPTable(5);
+                    table.WidthPercentage = 100;
+                    table.AddCell("Cliente");
+                    table.AddCell("Documento");
+                    table.AddCell("Estado Mora");
+                    table.AddCell("Deuda Total");
+                    table.AddCell("Días en Mora");
+
+                    foreach (var cliente in clientes.OrderByDescending(c => c.DeudaTotal))
+                    {
+                        table.AddCell(cliente.Nombre);
+                        table.AddCell(cliente.Documento);
+                        table.AddCell(cliente.EstadoMora);
+                        table.AddCell($"S/ {cliente.DeudaTotal:N2}");
+                        table.AddCell(((DateTime.UtcNow - cliente.FechaActualizacion).Days).ToString());
+                    }
+
+                    doc.Add(table);
+                    doc.Close();
+
+                    byte[] bytes = memoryStream.ToArray();
+                    return File(bytes, "application/pdf", $"ReporteMorosidad_{DateTime.Now:yyyyMMdd}.pdf");
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al generar el reporte en PDF: {ex.Message}";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        public async Task<IActionResult> DescargarReporteExcel()
+        {
+            try
+            {
+                // Obtén los datos para el reporte desde la base de datos
+                var clientes = await _db.Clientes.ToListAsync();
+
+                using (var workbook = new XLWorkbook())
+                {
+                    // Crear una hoja de trabajo
+                    var worksheet = workbook.Worksheets.Add("Reporte Mora");
+
+                    // Agregar los encabezados de la tabla
+                    worksheet.Cell(1, 1).Value = "Cliente";
+                    worksheet.Cell(1, 2).Value = "Documento";
+                    worksheet.Cell(1, 3).Value = "Estado Mora";
+                    worksheet.Cell(1, 4).Value = "Deuda Total";
+                    worksheet.Cell(1, 5).Value = "Días en Mora";
+
+                    // Agregar los datos a la tabla
+                    int row = 2;
+                    foreach (var cliente in clientes.OrderByDescending(c => c.DeudaTotal))
+                    {
+                        worksheet.Cell(row, 1).Value = cliente.Nombre;
+                        worksheet.Cell(row, 2).Value = cliente.Documento;
+                        worksheet.Cell(row, 3).Value = cliente.EstadoMora;
+                        worksheet.Cell(row, 4).Value = cliente.DeudaTotal;
+                        worksheet.Cell(row, 5).Value = (DateTime.UtcNow - cliente.FechaActualizacion).Days;
+                        row++;
+                    }
+
+                    // Ajustar el tamaño de las columnas
+                    worksheet.ColumnsUsed().AdjustToContents();
+
+                    using (var stream = new MemoryStream())
+                    {
+                        // Guardar el archivo Excel en un stream de memoria
+                        workbook.SaveAs(stream);
+                        var content = stream.ToArray();
+                        return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "ReporteMorosidad.xlsx");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al generar el reporte en Excel: {ex.Message}";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> CargarFiltro(int filtroId)
         {
@@ -1090,7 +1228,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
                 // Estadísticas generales
                 reporteViewModel.TotalClientes = clientes.Count;
                 reporteViewModel.ClientesAlDia = clientes.Count(c => c.EstadoMora == "Al día");
-                reporteViewModel.ClientesMoraTemrpana = clientes.Count(c => c.EstadoMora == "Temprana");
+                reporteViewModel.ClientesMoraTemprana = clientes.Count(c => c.EstadoMora == "Temprana");
                 reporteViewModel.ClientesMoraModerada = clientes.Count(c => c.EstadoMora == "Moderada");
                 reporteViewModel.ClientesMoraGrave = clientes.Count(c => c.EstadoMora == "Grave");
                 reporteViewModel.ClientesMoraCritica = clientes.Count(c => c.EstadoMora == "Crítica");
@@ -1098,7 +1236,7 @@ public async Task<IActionResult> ActualizarEstadoCartera(Audicob.Models.CarteraE
                 // Montos por estado
                 reporteViewModel.MontoTotalDeuda = clientes.Sum(c => c.DeudaTotal);
                 reporteViewModel.MontoAlDia = clientes.Where(c => c.EstadoMora == "Al día").Sum(c => c.DeudaTotal);
-                reporteViewModel.MontoMoraTemplana = clientes.Where(c => c.EstadoMora == "Temprana").Sum(c => c.DeudaTotal);
+                reporteViewModel.MontoMoraTemprana = clientes.Where(c => c.EstadoMora == "Temprana").Sum(c => c.DeudaTotal);
                 reporteViewModel.MontoMoraModerada = clientes.Where(c => c.EstadoMora == "Moderada").Sum(c => c.DeudaTotal);
                 reporteViewModel.MontoMoraGrave = clientes.Where(c => c.EstadoMora == "Grave").Sum(c => c.DeudaTotal);
                 reporteViewModel.MontoMoraCritica = clientes.Where(c => c.EstadoMora == "Crítica").Sum(c => c.DeudaTotal);

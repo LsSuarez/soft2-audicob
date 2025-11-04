@@ -7,7 +7,9 @@ namespace Audicob.Models.ViewModels.Supervisor
         // Estadísticas generales
         public int TotalClientes { get; set; }
         public int ClientesAlDia { get; set; }
-        public int ClientesMoraTemrpana { get; set; }
+        
+        // CORRECCIÓN: Nombres corregidos
+        public int ClientesMoraTemprana { get; set; }
         public int ClientesMoraModerada { get; set; }
         public int ClientesMoraGrave { get; set; }
         public int ClientesMoraCritica { get; set; }
@@ -15,7 +17,9 @@ namespace Audicob.Models.ViewModels.Supervisor
         // Montos
         public decimal MontoTotalDeuda { get; set; }
         public decimal MontoAlDia { get; set; }
-        public decimal MontoMoraTemplana { get; set; }
+        
+        // CORRECCIÓN: Nombres corregidos
+        public decimal MontoMoraTemprana { get; set; }
         public decimal MontoMoraModerada { get; set; }
         public decimal MontoMoraGrave { get; set; }
         public decimal MontoMoraCritica { get; set; }

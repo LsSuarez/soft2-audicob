@@ -1,0 +1,47 @@
+@model IEnumerable<Audicob.Models.AlertaCobranza>
+
+@{
+    ViewData["Title"] = "Lista de Alertas";
+}
+
+<h2>Alertas de Cobranza</h2>
+
+@if (TempData["Mensaje"] != null)
+{
+    <div class="alert alert-success">@TempData["Mensaje"]</div>
+}
+
+<a asp-action="Crear" class="btn btn-primary mb-3">Generar Alerta para Cliente Nuevo</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Cliente</th>
+            <th>Monto</th>
+            <th>Fecha Límite</th>
+            <th>Estado</th>
+            <th>Prioridad</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var a in Model)
+        {
+            <tr>
+                <td>@(a.Cliente != null ? a.Cliente.Nombre : "Cliente no cargado")</td>
+                <td>S/ @a.Monto</td>
+                <td>@a.FechaLimite.ToShortDateString()</td>
+                <td>@a.Estado</td>
+                <td>@a.Prioridad</td>
+                <td>
+                    @if(a.Estado != "Atendida")
+                    {
+                        <a asp-action="Atender" asp-route-id="@a.Id" class="btn btn-success btn-sm">
+                            ✅ Atender
+                        </a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

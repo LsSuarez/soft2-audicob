@@ -28,6 +28,8 @@ namespace Audicob.Data
         public DbSet<MetodoPagoCliente> MetodosPagoClientes { get; set; }
         public DbSet<HistorialAuditoria> HistorialAuditorias { get; set; }
         public DbSet<DetalleRiesgo> DetalleRiesgo { get; set; }
+        public DbSet<AlertaCobranza> AlertasCobranza { get; set; }
+
 
 
         

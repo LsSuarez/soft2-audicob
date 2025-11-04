@@ -1,0 +1,45 @@
+@model Audicob.Models.AlertaCobranza
+
+@{
+    ViewData["Title"] = "Crear Alerta";
+}
+
+<h2>Crear Alerta para Cliente Nuevo</h2>
+
+<form asp-action="Crear" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        <label>Nombre del Cliente</label>
+        <input name="ClienteNombre" class="form-control" required />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Monto" class="control-label">Monto</label>
+        <input asp-for="Monto" class="form-control" />
+        <span asp-validation-for="Monto" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="FechaLimite" class="control-label">Fecha Límite</label>
+        <input asp-for="FechaLimite" class="form-control" type="date" />
+        <span asp-validation-for="FechaLimite" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Prioridad" class="control-label">Prioridad</label>
+        <select asp-for="Prioridad" class="form-control">
+            <option value="Baja">Baja</option>
+            <option value="Normal" selected>Normal</option>
+            <option value="Alta">Alta</option>
+        </select>
+        <span asp-validation-for="Prioridad" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-success">✅ Guardar Alerta</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

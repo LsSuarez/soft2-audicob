@@ -85,39 +85,54 @@
                                 </li>
                             }
 
-                            <!-- ASESOR DE COBRANZA -->
-                            @if (User.IsInRole("AsesorCobranza"))
-                            {
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" id="asesorDropdown" role="button" 
-                                       data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-hand-holding-usd me-1"></i>Cobranza
-                                    </a>
-                                    <ul class="dropdown-menu" aria-labelledby="asesorDropdown">
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Asesor" asp-action="HistorialCredito">
-                                                <i class="fas fa-history me-2"></i>Historial Crediticio
-                                            </a>
-                                        </li>
-       
+<!-- ASESOR DE COBRANZA -->
+@if (User.IsInRole("AsesorCobranza"))
+{
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="asesorDropdown" role="button" 
+           data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-hand-holding-usd me-1"></i>Cobranza
+        </a>
 
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Asesor" asp-action="Index">
-                                                <i class="fas fa-users me-2"></i>Gestión de Clientes
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Asesor" asp-action="ConsultaRiesgo">
-                                                <i class="fas fa-users me-2"></i>Consultar Riesgo
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
-                                                                 <li>
-    <a class="dropdown-item" asp-controller="ClienteEdicion" asp-action="Index">
-        <i class="fas fa-user-edit me-2"></i>Actualizar Información del Cliente
-    </a>
-</li>
+        <ul class="dropdown-menu" aria-labelledby="asesorDropdown">
+
+            <li>
+                <a class="dropdown-item" asp-controller="Asesor" asp-action="HistorialCredito">
+                    <i class="fas fa-history me-2"></i>Historial Crediticio
+                </a>
+            </li>
+
+            <li>
+                <a class="dropdown-item" asp-controller="Asesor" asp-action="Index">
+                    <i class="fas fa-users me-2"></i>Gestión de Clientes
+                </a>
+            </li>
+
+            <li>
+                <a class="dropdown-item" asp-controller="Asesor" asp-action="ConsultaRiesgo">
+                    <i class="fas fa-search-dollar me-2"></i>Consultar Riesgo
+                </a>
+            </li>
+
+            <li><hr class="dropdown-divider" /></li>
+
+            <!-- HU: Generar alertas de morosidad -->
+            <a class="dropdown-item" asp-controller="AlertasCobranza" asp-action="Index">
+    <i class="fas fa-bell-exclamation me-2 text-danger"></i>
+    Generar alertas de morosidad
+</a>
+
+
+        </ul>
+    </li>
+
+    <li>
+        <a class="nav-link" asp-controller="ClienteEdicion" asp-action="Index">
+            <i class="fas fa-user-edit me-2"></i>Actualizar Información del Cliente
+        </a>
+    </li>
+}
+
                             }
 
                             <!-- SUPERVISOR -->

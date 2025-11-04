@@ -1,0 +1,49 @@
+@model List<Audicob.Models.DetalleRiesgo>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-warning text-center">
+        No hay información de riesgo registrada para este cliente.
+    </div>
+}
+else
+{
+    <div class="card mt-3">
+        <div class="card-header bg-light">
+            <strong>Detalle de Riesgo</strong>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th>Elemento</th>
+                        <th>Valor</th>
+                        <th>Comentario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var colorClass = "";
+                        if (item.Elemento == "Puntaje Calculado")
+                        {
+                            colorClass = item.Comentario switch
+                            {
+                                "Bajo" => "table-success",
+                                "Medio" => "table-warning",
+                                "Alto" => "table-danger",
+                                _ => ""
+                            };
+                        }
+
+                        <tr class="@colorClass">
+                            <td>@item.Elemento</td>
+                            <td>@item.Valor</td>
+                            <td>@item.Comentario</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

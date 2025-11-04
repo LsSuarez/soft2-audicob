@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using iTextSharp.text;
+using iTextSharp.text.pdf;
+using ClosedXML.Excel;
+using System.IO;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Audicob.Controllers
 {
@@ -57,7 +64,7 @@ namespace Audicob.Controllers
             return View(vm);
         }
 
-        
+
         // ==========================================================
         // HU-23 GUARDAR EL HISTORIAL CREDITICIO
         // ==========================================================
@@ -168,7 +175,7 @@ namespace Audicob.Controllers
 
                 // Obtener clientes asignados al asesor
                 var clientesAsignados = new List<Cliente>();
-                
+
                 try
                 {
                     var asignaciones = await _db.AsignacionesAsesores
@@ -200,7 +207,7 @@ namespace Audicob.Controllers
                 }
 
                 ViewBag.ClientesAsignados = clientesAsignados;
-                
+
                 if (!clientesAsignados.Any())
                 {
                     ViewBag.InfoMessage = "No tienes clientes asignados para gestionar.";
@@ -242,7 +249,7 @@ namespace Audicob.Controllers
                     ModelState.AddModelError("", "No tienes permisos para realizar esta acción.");
                     return await CargarDatosFormulario(modelo);
                 }
-                
+
                 // Validar que el cliente esté asignado al asesor
                 var asignacion = await _db.AsignacionesAsesores
                     .Include(a => a.Clientes)
@@ -255,7 +262,7 @@ namespace Audicob.Controllers
                 }
 
                 var cliente = asignacion.Clientes.FirstOrDefault(c => c.Id == modelo.ClienteId);
-                
+
                 if (cliente == null)
                 {
                     ModelState.AddModelError("", "Cliente no encontrado.");
@@ -265,7 +272,7 @@ namespace Audicob.Controllers
                 // Validar el cambio de estado
                 modelo.EstadoActual = cliente.EstadoMora;
                 var errores = modelo.ValidarCambioEstado();
-                
+
                 if (errores.Any())
                 {
                     foreach (var error in errores)
@@ -310,7 +317,7 @@ namespace Audicob.Controllers
                 }
 
                 TempData["Success"] = $"Estado de morosidad cambiado exitosamente de '{historial.EstadoAnterior}' a '{historial.NuevoEstado}' para el cliente {cliente.Nombre}.";
-                
+
                 return RedirectToAction("VerHistorialEstado", new { clienteId = cliente.Id });
             }
             catch (Exception ex)
@@ -344,7 +351,7 @@ namespace Audicob.Controllers
                 TempData["Error"] = "No tienes permisos para acceder a esta funcionalidad.";
                 return RedirectToAction("Index", "Home");
             }
-            
+
             // Verificar que el cliente esté asignado al asesor
             var asignacion = await _db.AsignacionesAsesores
                 .Include(a => a.Clientes)
@@ -357,7 +364,7 @@ namespace Audicob.Controllers
             }
 
             var cliente = asignacion.Clientes.FirstOrDefault(c => c.Id == clienteId);
-            
+
             if (cliente == null)
             {
                 TempData["Error"] = "Cliente no encontrado.";
@@ -415,7 +422,7 @@ namespace Audicob.Controllers
             {
                 return Json(new { success = false, message = "No tienes permisos para realizar esta acción" });
             }
-            
+
             var cliente = await _db.AsignacionesAsesores
                 .Include(a => a.Clientes)
                 .Where(a => a.AsesorUserId == user.Id && a.Clientes.Any(c => c.Id == clienteId))
@@ -427,10 +434,10 @@ namespace Audicob.Controllers
                 return Json(new { success = false, message = "Cliente no encontrado o no asignado" });
             }
 
-            return Json(new 
-            { 
-                success = true, 
-                cliente = new 
+            return Json(new
+            {
+                success = true,
+                cliente = new
                 {
                     id = cliente.Id,
                     nombre = cliente.Nombre,
@@ -461,7 +468,7 @@ namespace Audicob.Controllers
             {
                 return Challenge();
             }
-            
+
             var clientesAsignados = await _db.AsignacionesAsesores
                 .Include(a => a.Clientes)
                 .Where(a => a.AsesorUserId == user.Id)
@@ -482,7 +489,7 @@ namespace Audicob.Controllers
             {
                 // Aquí se implementaría la lógica de notificación
                 // Por ejemplo: email, SMS, notificación push, etc.
-                
+
                 // Simulación de envío de notificación
                 // En una implementación real, aquí iría la integración con:
                 // - Servicio de email (SendGrid, AWS SES, etc.)
@@ -496,7 +503,7 @@ namespace Audicob.Controllers
 
                 // Log para auditoría
                 Console.WriteLine($"[NOTIFICACIÓN] Cliente: {cliente.Nombre}, Mensaje: {mensaje}");
-                
+
                 await Task.CompletedTask; // Simular operación asíncrona
             }
             catch (Exception ex)
@@ -505,6 +512,147 @@ namespace Audicob.Controllers
                 Console.WriteLine($"[ERROR] No se pudo enviar notificación: {ex.Message}");
             }
         }
+
+        // ======================================
+        // HU-31 CONSULTA DE RIESGO DEL CLIENTE 
+        // ======================================
+
+        [HttpGet]
+        public IActionResult ConsultaRiesgo()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult ConsultaRiesgo(string dni)
+        {
+            if (string.IsNullOrWhiteSpace(dni))
+            {
+                ViewBag.Error = "Por favor, ingrese un DNI válido.";
+                return View();
+            }
+
+            var cliente = _db.PerfilesCliente.FirstOrDefault(c => c.DocumentoIdentidad == dni);
+
+            if (cliente == null)
+            {
+                ViewBag.Error = "No se encontró ningún cliente con ese DNI.";
+                return View();
+            }
+
+            // Buscar el puntaje calculado del cliente
+            var riesgo = _db.DetalleRiesgo
+                .FirstOrDefault(r => r.PerfilClienteId == cliente.Id && r.Elemento == "Puntaje Calculado");
+
+            ViewBag.Riesgo = riesgo;
+
+            return View(cliente);
+        }
+
+        // =======================================
+        // HU-31 CARGAR DETALLE DE RIESGO (AJAX)
+        // =======================================
+        [HttpGet]
+        public async Task<IActionResult> CargarDetalleRiesgo(int id)
+        {
+            var riesgos = await _db.DetalleRiesgo
+                .Where(r => r.PerfilClienteId == id)
+                .ToListAsync();
+
+            return PartialView("_DetalleRiesgoPartial", riesgos);
+        }
+
+        // =======================================
+// HU-31 EXPORTAR RIESGO A PDF
+// =======================================
+[HttpGet]
+public IActionResult ExportarRiesgo(int id)
+{
+    var cliente = _db.PerfilesCliente.FirstOrDefault(c => c.Id == id);
+    if (cliente == null)
+        return NotFound();
+
+    var riesgos = _db.DetalleRiesgo
+        .Where(r => r.PerfilClienteId == id)
+        .ToList();
+
+    using (var ms = new MemoryStream())
+    {
+        // Crear documento PDF
+        var document = new iTextSharp.text.Document(PageSize.A4, 40, 40, 40, 40);
+        var writer = iTextSharp.text.pdf.PdfWriter.GetInstance(document, ms);
+        document.Open();
+
+        // Título
+        var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 16);
+        var subFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 12);
+        var normalFont = FontFactory.GetFont(FontFactory.HELVETICA, 10);
+
+        document.Add(new Paragraph("Reporte de Riesgo del Cliente", titleFont));
+        document.Add(new Paragraph(" ")); // espacio
+
+        // Datos del cliente
+        var tableCliente = new PdfPTable(2);
+        tableCliente.WidthPercentage = 100;
+        tableCliente.AddCell(new Phrase("DNI:", subFont));
+        tableCliente.AddCell(new Phrase(cliente.DocumentoIdentidad ?? "", normalFont));
+        tableCliente.AddCell(new Phrase("Nombre:", subFont));
+        tableCliente.AddCell(new Phrase(cliente.Nombre ?? "", normalFont));
+        tableCliente.AddCell(new Phrase("Teléfono:", subFont));
+        tableCliente.AddCell(new Phrase(cliente.Telefono ?? "", normalFont));
+        tableCliente.AddCell(new Phrase("Correo:", subFont));
+        tableCliente.AddCell(new Phrase(cliente.Correo ?? "", normalFont));
+        tableCliente.AddCell(new Phrase("Dirección:", subFont));
+        tableCliente.AddCell(new Phrase(cliente.Direccion ?? "", normalFont));
+        document.Add(tableCliente);
+
+        document.Add(new Paragraph(" "));
+        document.Add(new Paragraph("Detalle de Riesgo", subFont));
+        document.Add(new Paragraph(" "));
+
+        // Tabla de riesgo
+        var table = new PdfPTable(3);
+        table.WidthPercentage = 100;
+        table.AddCell(new Phrase("Elemento", subFont));
+        table.AddCell(new Phrase("Valor", subFont));
+        table.AddCell(new Phrase("Comentario", subFont));
+
+        foreach (var r in riesgos)
+        {
+            var color = BaseColor.White;
+
+            if (r.Elemento == "Puntaje Calculado")
+            {
+                color = r.Comentario switch
+                {
+                    "Bajo" => BaseColor.Green,
+                    "Medio" => BaseColor.Yellow,
+                    "Alto" => BaseColor.Red,
+                    _ => BaseColor.White
+                };
+            }
+
+            var cellElemento = new PdfPCell(new Phrase(r.Elemento, normalFont));
+            var cellValor = new PdfPCell(new Phrase(r.Valor, normalFont));
+            var cellComentario = new PdfPCell(new Phrase(r.Comentario, normalFont));
+
+            cellElemento.BackgroundColor = color;
+            cellValor.BackgroundColor = color;
+            cellComentario.BackgroundColor = color;
+
+            table.AddCell(cellElemento);
+            table.AddCell(cellValor);
+            table.AddCell(cellComentario);
+        }
+
+        document.Add(table);
+        document.Close();
+
+        byte[] bytes = ms.ToArray();
+        return File(bytes, "application/pdf", $"RiesgoCliente_{cliente.DocumentoIdentidad}.pdf");
+    }
+}
+
 
     }
 }
